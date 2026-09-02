@@ -39,3 +39,6 @@ Thumbs.db
 # ESP32 / Arduino generated files
 *.bin
 *.elf
+
+# Images
+image.png
