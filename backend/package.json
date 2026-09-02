@@ -1,0 +1,14 @@
+{
+  "name": "iot-border-alert-backend",
+  "version": "1.0.0",
+  "description": "Express API server for IoT Border Alert & Geofence Monitoring System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}
