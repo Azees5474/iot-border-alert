@@ -87,7 +87,7 @@ const unsigned long WIFI_RECONNECT_INTERVAL = 5000;
 const unsigned long ALARM_BEEP_INTERVAL = 800;
 const unsigned long SCREEN_UPDATE_INTERVAL = 500;
 const unsigned long BACKEND_REGISTER_INTERVAL = 30000;
-const unsigned long POLL_INTERVAL = 2000;
+const unsigned long POLL_INTERVAL = 5000;
 
 // =====================================================
 // STATUS

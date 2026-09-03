@@ -15,7 +15,7 @@ import {
 
 const Device = () => {
   const { geofence, currentPosition } = useAppContext();
-  const { deviceStatus: polledStatus, lastSeen, refetch } = useDevice(2000);
+  const { deviceStatus: polledStatus, lastSeen, refetch } = useDevice(5000);
   const [buzzerOn, setBuzzerOn] = useState(false);
   const [sending, setSending] = useState(false);
 

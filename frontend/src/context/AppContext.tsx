@@ -179,7 +179,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     poll();
-    const timer = setInterval(poll, 2000);
+    const timer = setInterval(poll, 5000);
     return () => clearInterval(timer);
   }, []);
 
@@ -224,7 +224,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     pollLocation();
-    const timer = setInterval(pollLocation, 2000);
+    const timer = setInterval(pollLocation, 5000);
     return () => clearInterval(timer);
   }, [evaluateGeofence, persistAlert]);
 
