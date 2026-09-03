@@ -5,7 +5,15 @@ const http = require('http');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+app.use(cors({
+  origin: function (origin, callback) {
+    const allowed = process.env.CORS_ORIGIN;
+    if (!allowed || allowed === '*') return callback(null, true);
+    if (!origin) return callback(null, true);
+    if (allowed.split(',').map(s => s.trim()).includes(origin)) return callback(null, true);
+    return callback(new Error('CORS not allowed'));
+  },
+}));
 app.use(express.json());
 
 // ===== Default configuration =====
