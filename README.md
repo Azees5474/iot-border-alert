@@ -4,9 +4,9 @@ ESP32-based GPS tracking and geofence alert system.
 
 ## Current Architecture
 
-Phone GPS → ESP32 → Backend → Website
+Phone GPS → Frontend → Backend (Render) → ESP32 (polling)
 
-The phone is currently being used as a temporary GPS source.
+The phone is currently being used as a GPS source.
 
 ## Features
 

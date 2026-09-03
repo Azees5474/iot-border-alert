@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -70,10 +70,13 @@ const FixLeafletAssets = () => {
 
 const FlyToPhone = ({ pos }: { pos: LatLngTuple | null }) => {
   const map = useMap();
+  const lastPos = useRef<LatLngTuple | null>(null);
   useEffect(() => {
-    if (pos) {
-      map.flyTo(pos, 20, { duration: 1.5 });
-    }
+    if (!pos) return;
+    const prev = lastPos.current;
+    if (prev && prev[0] === pos[0] && prev[1] === pos[1]) return;
+    lastPos.current = pos;
+    map.flyTo(pos, 20, { duration: 1.5 });
   }, [pos, map]);
   return null;
 };

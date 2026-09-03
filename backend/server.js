@@ -37,6 +37,7 @@ let deviceStatus = {
 
 let alertHistory = [];
 let registeredDevices = []; // { deviceId, ip, port, lastSeen }
+let buzzerCommand = null;   // { id, action: 'on'|'off', ts }
 
 // ===== Haversine formula =====
 function haversine(lat1, lon1, lat2, lon2) {
@@ -129,6 +130,15 @@ app.post('/api/location', (req, res) => {
   if (typeof latitude !== 'number' || typeof longitude !== 'number') {
     return res.status(400).json({ error: 'latitude and longitude are required numbers' });
   }
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return res.status(400).json({ error: 'latitude and longitude must be finite numbers' });
+  }
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return res.status(400).json({ error: 'latitude/longitude out of range' });
+  }
+  if (latitude === 0 && longitude === 0) {
+    return res.status(400).json({ error: 'invalid coordinates (0,0)' });
+  }
   currentLocation = {
     latitude,
     longitude,
@@ -186,6 +196,38 @@ app.post('/api/device/heartbeat', (req, res) => {
     lastSeen: new Date().toISOString(),
   };
   res.json({ ok: true, ...deviceStatus });
+});
+
+// --- ESP32 Poll ---
+app.get('/api/device/poll', (req, res) => {
+  const deviceId = req.query.deviceId;
+  const status = computeStatus();
+  let text =
+    'lat=' + currentLocation.latitude +
+    '&lon=' + currentLocation.longitude +
+    '&acc=' + currentLocation.accuracy +
+    '&dist=' + status.distance +
+    '&alert=' + (status.alert ? 1 : 0);
+  if (buzzerCommand) {
+    text += '&buzzer=' + buzzerCommand.action;
+    buzzerCommand = null;
+  }
+  res.type('text/plain').send(text);
+});
+
+// --- Buzzer command (sent from the website) ---
+app.post('/api/device/buzzer', (req, res) => {
+  const { action, deviceId } = req.body || {};
+  if (action !== 'on' && action !== 'off') {
+    return res.status(400).json({ error: "action must be 'on' or 'off'" });
+  }
+  buzzerCommand = {
+    id: Date.now().toString(),
+    action,
+    deviceId: deviceId || null,
+    ts: new Date().toISOString(),
+  };
+  res.json({ ok: true, command: buzzerCommand });
 });
 
 // --- ESP32 Register IP ---

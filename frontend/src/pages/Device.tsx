@@ -26,8 +26,9 @@ const Device = () => {
   const handleTestBuzzer = async () => {
     setSending(true);
     try {
-      await deviceApi.postDeviceStatus({ deviceId: status.deviceId || 'ESP32-001', status: 'online' });
-      setBuzzerOn((prev) => !prev);
+      const next = !buzzerOn;
+      await deviceApi.setBuzzer({ action: next ? 'on' : 'off', deviceId: status.deviceId || 'ESP32-001' });
+      setBuzzerOn(next);
       setTimeout(() => setSending(false), 500);
     } catch {
       setSending(false);
@@ -136,12 +137,12 @@ const Device = () => {
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Actions</h3>
             <div className="flex flex-wrap gap-3">
               <button
-                className="btn btn-warning flex items-center gap-2"
+                className={`btn ${buzzerOn ? 'btn-danger' : 'btn-warning'} flex items-center gap-2`}
                 onClick={handleTestBuzzer}
                 disabled={sending}
               >
                 <Send size={16} />
-                {sending ? 'Sending...' : 'Test Buzzer'}
+                {sending ? 'Sending...' : buzzerOn ? 'Stop Buzzer' : 'Test Buzzer'}
               </button>
               <button
                 className="btn btn-outline flex items-center gap-2"

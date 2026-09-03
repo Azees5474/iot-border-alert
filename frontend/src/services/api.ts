@@ -64,6 +64,10 @@ export const deviceApi = {
     const res = await api.get('/device/status');
     return res.data as DeviceStatus;
   },
+  setBuzzer: async (data: { action: 'on' | 'off'; deviceId?: string }) => {
+    const res = await api.post('/device/buzzer', data);
+    return res.data;
+  },
 };
 
 export const alertApi = {

@@ -88,53 +88,52 @@ VITE v4.5.14  ready in 1722 ms
 
 ## Part 2: Online Deployment (Production)
 
-### Step 1: Deploy Backend to Railway (Recommended)
+### Step 1: Deploy Backend to Render
 
 1. **Push code to GitHub**
-   ```bash
-   cd "E:\alert system"
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git remote add origin https://github.com/your-username/iot-border-alert.git
-   git push -u origin main
-   ```
+    ```bash
+    cd "E:\iot-border-alert"
+    git init
+    git add .
+    git commit -m "Initial commit"
+    git remote add origin https://github.com/your-username/iot-border-alert.git
+    git push -u origin main
+    ```
 
-2. **Create Railway account**
-   - Go to https://railway.app
-   - Sign up with GitHub
+2. **Create Render account**
+    - Go to https://render.com
+    - Sign up with GitHub
 
-3. **Deploy project**
-   - Click **"New Project"**
-   - Select **"Deploy from GitHub repo"**
-   - Choose your `iot-border-alert` repository
+3. **Create new Web Service**
+    - Click **"New +"** → **"Web Service"**
+    - Connect your `iot-border-alert` repository
+    - **Root Directory**: `backend`
+    - **Runtime**: Node
+    - **Build Command**: `npm install`
+    - **Start Command**: `node server.js`
+    - **Instance Type**: Free
 
-4. **Set root directory**
-   - Go to **Settings** → **Root Directory**
-   - Set to: `backend`
+4. **Add environment variables**
+    - Go to **Environment** tab
+    - Add:
+      ```
+      PORT=3001
+      CORS_ORIGIN=*
+      ```
 
-5. **Add environment variables**
-   - Go to **Variables** tab
-   - Add:
-     ```
-     PORT=3001
-     CORS_ORIGIN=*
-     ```
-
-6. **Deploy**
-   - Railway builds and deploys automatically
-   - You get a URL like: `https://iot-border-alert-production.up.railway.app`
+5. **Deploy**
+    - Render builds and deploys automatically
+    - You get a URL like: `https://iot-border-alert-we.onrender.com`
 
 ### Step 2: Update ESP32 for Online Mode
 
-Open `backend/esp32_firmware/esp32_border_alert.ino` and change:
+Open `backend/esp32_firmware/esp32_border_alert.ino` (or `esp32_border_alert_gps.ino`) and change:
 
 ```cpp
-// FROM:
-const char* backendUrl = "http://192.168.1.100:3001";
-
-// TO:
-const char* backendUrl = "https://iot-border-alert-production.up.railway.app";
+const char* ssid = "ESP32TEST";
+const char* password = "12345678";
+const char* backendUrl = "https://iot-border-alert-we.onrender.com";
+const char* deviceId = "ESP32-001";
 ```
 
 Upload to ESP32 via Arduino IDE.
@@ -143,7 +142,7 @@ Upload to ESP32 via Arduino IDE.
 
 Create `frontend/.env`:
 ```
-VITE_API_URL=https://iot-border-alert-production.up.railway.app
+VITE_API_URL=https://iot-border-alert-we.onrender.com
 ```
 
 Rebuild frontend:
@@ -155,29 +154,29 @@ npm run build
 ### Step 4: Deploy Frontend to Vercel (Free)
 
 1. **Push frontend to separate repo** (or use same repo with different root)
-   ```bash
-   cd frontend
-   git init
-   git add .
-   git commit -m "Frontend"
-   git remote add origin https://github.com/your-username/iot-border-alert-frontend.git
-   git push -u origin main
-   ```
+    ```bash
+    cd frontend
+    git init
+    git add .
+    git commit -m "Frontend"
+    git remote add origin https://github.com/your-username/iot-border-alert-frontend.git
+    git push -u origin main
+    ```
 
 2. **Deploy on Vercel**
-   - Go to https://vercel.com
-   - Sign up with GitHub
-   - Click **"New Project"**
-   - Import your frontend repo
-   - Set **Root Directory** to `frontend`
-   - Add environment variable:
-     ```
-     VITE_API_URL=https://iot-border-alert-production.up.railway.app
-     ```
-   - Click **Deploy**
+    - Go to https://vercel.com
+    - Sign up with GitHub
+    - Click **"New Project"**
+    - Import your frontend repo
+    - Set **Root Directory** to `frontend`
+    - Add environment variable:
+      ```
+      VITE_API_URL=https://iot-border-alert-we.onrender.com
+      ```
+    - Click **Deploy**
 
 3. **Your dashboard is now live!**
-   - URL: `https://your-project.vercel.app`
+    - URL: `https://your-project.vercel.app`
 
 ---
 
@@ -200,8 +199,16 @@ npm run build
 ```cpp
 const char* ssid = "ESP32TEST";
 const char* password = "12345678";
-const char* backendUrl = "http://192.168.1.100:3001";  // Your PC IP or public URL
+const char* backendUrl = "https://iot-border-alert-we.onrender.com";
+const char* deviceId = "ESP32-001";
 ```
+
+**How it works:**
+1. ESP32 connects to WiFi
+2. ESP32 registers with backend
+3. ESP32 polls `/api/device/poll` every 2 seconds
+4. Backend returns latest phone GPS and geofence status
+5. ESP32 displays location and controls buzzer/OLED
 
 **Upload:**
 1. Open Arduino IDE
@@ -228,8 +235,18 @@ const char* backendUrl = "http://192.168.1.100:3001";  // Your PC IP or public U
 ```cpp
 const char* ssid = "ESP32TEST";
 const char* password = "12345678";
-const char* backendUrl = "https://your-public-backend-url.com";
+const char* backendUrl = "https://iot-border-alert-we.onrender.com";
+const char* deviceId = "ESP32-001";
 ```
+
+**How it works:**
+1. NEO-7M acquires satellite GPS fix
+2. ESP32 reads NMEA data via Serial2
+3. TinyGPS++ parses latitude, longitude, satellites, HDOP
+4. ESP32 sends GPS to backend every 2 seconds
+5. ESP32 polls `/api/device/poll` for geofence status
+6. Backend calculates status based on ESP32's own GPS
+7. ESP32 receives status and controls OLED/buzzer
 
 **Required Libraries:**
 - `Adafruit GFX Library`
@@ -328,17 +345,18 @@ This creates a `dist/` folder with optimized production files.
 3. Look for: `Registered with backend: 200`
 4. If you see this, ESP32 is connected
 
-### Test 3: GPS Forwarding
+### Test 3: GPS Polling
 1. Start GPS tracking on phone
 2. Check ESP32 Serial Monitor
 3. You should see:
-   ```
-   Location update:
-     LAT: 13.082680
-     LON: 80.270718
-     DIST: 45 m
-     ALERT: NO
-   ```
+    ```
+    Location update:
+      LAT: 13.082680
+      LON: 80.270718
+      ACC: 5.0 m
+      DIST: 45 m
+      ALERT: NO
+    ```
 
 ### Test 4: Geofence Alert
 1. Set geofence radius to **20m**
@@ -348,9 +366,9 @@ This creates a `dist/` folder with optimized production files.
 5. Move back inside — should show `SAFE` and buzzer stops
 
 ### Test 5: Online Deployment
-1. Deploy backend to Railway
-2. Update ESP32 `backendUrl` to public URL
-3. Update frontend `VITE_API_URL` to public URL
+1. Deploy backend to Render
+2. Update ESP32 `backendUrl` to `https://iot-border-alert-we.onrender.com`
+3. Update frontend `VITE_API_URL` to `https://iot-border-alert-we.onrender.com`
 4. Deploy frontend to Vercel
 5. Open frontend URL on phone (mobile data or any WiFi)
 6. Start GPS tracking
@@ -377,6 +395,8 @@ This creates a `dist/` folder with optimized production files.
 | OLED blank | Try changing `OLED_ADDRESS` to `0x3D` |
 | GPS no fix | Go outdoors. NEO-7M needs clear sky view |
 | GPS timeout | Check wiring: TX→GPIO16, RX→GPIO17 |
+| Polling returns 404 | Make sure backend is deployed and URL is correct in firmware |
+| Polling returns -1 | Backend URL must be HTTPS for Render |
 
 ### Frontend Issues
 
@@ -404,11 +424,12 @@ This creates a `dist/` folder with optimized production files.
 ┌─────────────────────────────────────────────────────────────┐
 │                    ONLINE DEPLOYMENT                         │
 │                                                              │
-│  Phone (GPS) ──► Frontend (Vercel) ──► Backend (Railway)    │
+│  Phone (GPS) ──► Frontend (Vercel) ──► Backend (Render)    │
 │                                               │              │
 │                                               │              │
 │  ESP32 + GPS ◄────────────────────────────────┘              │
 │       │                                                     │
+│       │  Polls /api/device/poll every 2s                     │
 │       ▼                                                     │
 │  OLED + Buzzer                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -426,12 +447,7 @@ CORS_ORIGIN=*
 
 ### Frontend (.env)
 ```
-VITE_API_URL=http://localhost:3001
-```
-
-For production:
-```
-VITE_API_URL=https://your-backend.railway.app
+VITE_API_URL=https://iot-border-alert-we.onrender.com
 ```
 
 ---
@@ -452,10 +468,10 @@ VITE_API_URL=https://your-backend.railway.app
 
 | Service | Free Tier | Paid Tier |
 |---------|-----------|-----------|
-| Railway (Backend) | 500 hours/month | $5/month |
+| Render (Backend) | 100 hours/month | $7/month |
 | Vercel (Frontend) | 100GB bandwidth | $20/month |
 | Ngrok (Testing) | 1 tunnel | $10/month |
-| **Total** | **$0/month** | **$35/month** |
+| **Total** | **$0/month** | **$37/month** |
 
 For a college project, the **free tier is more than enough**.
 
@@ -465,9 +481,9 @@ For a college project, the **free tier is more than enough**.
 
 1. Test locally with phone GPS
 2. Test locally with NEO-7M GPS
-3. Deploy backend to Railway
+3. Deploy backend to Render
 4. Deploy frontend to Vercel
-5. Update ESP32 with public URL
+5. Update ESP32 with public URL `https://iot-border-alert-we.onrender.com`
 6. Test from anywhere using mobile data
 
 Good luck with your project!

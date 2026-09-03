@@ -41,6 +41,10 @@ export const useGeolocation = (): GeolocationState => {
     watchId.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude, accuracy: acc } = pos.coords;
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+        if (latitude < -90 || latitude > 90) return;
+        if (longitude < -180 || longitude > 180) return;
+        if (latitude === 0 && longitude === 0) return;
         const ts = pos.timestamp;
         const position: Position = {
           lat: latitude,
@@ -53,12 +57,11 @@ export const useGeolocation = (): GeolocationState => {
       },
       (err) => {
         setError(err.message || 'Failed to retrieve location');
-        setIsTracking(false);
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        timeout: 15000,
+        maximumAge: 5000,
       },
     );
   }, [isTracking]);

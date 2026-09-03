@@ -1,5 +1,4 @@
 #include <WiFi.h>
-#include <WebServer.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -52,8 +51,6 @@ Adafruit_SSD1306 display(
   OLED_RESET
 );
 
-WebServer server(80);
-
 // =====================================================
 // GPS DATA
 // =====================================================
@@ -76,6 +73,7 @@ unsigned long lastReconnectAttempt = 0;
 unsigned long lastAlarmBeep = 0;
 unsigned long lastScreenUpdate = 0;
 unsigned long lastBackendRegister = 0;
+unsigned long lastPollTime = 0;
 
 // =====================================================
 // SETTINGS
@@ -87,6 +85,7 @@ const unsigned long WIFI_RECONNECT_INTERVAL = 5000;
 const unsigned long ALARM_BEEP_INTERVAL = 800;
 const unsigned long SCREEN_UPDATE_INTERVAL = 500;
 const unsigned long BACKEND_REGISTER_INTERVAL = 30000;
+const unsigned long POLL_INTERVAL = 2000;
 
 // =====================================================
 // STATUS
@@ -345,103 +344,73 @@ void showBorderStatus()
 }
 
 // =====================================================
-// ROOT PAGE
+// PARSE TEXT RESPONSE
 // =====================================================
 
-void handleRoot()
+String getValue(String data, String key)
 {
-  String message;
-
-  message += "ESP32 Border Alert\n";
-  message += "------------------------\n";
-
-  message += "WiFi: ";
-
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    message += "CONNECTED\n";
-  }
-  else
-  {
-    message += "DISCONNECTED\n";
-  }
-
-  message += "IP: ";
-  message += WiFi.localIP().toString();
-  message += "\n";
-
-  message += "Latitude: ";
-  message += String(latitude, 6);
-  message += "\n";
-
-  message += "Longitude: ";
-  message += String(longitude, 6);
-  message += "\n";
-
-  message += "Accuracy: ";
-  message += String(gpsAccuracy, 1);
-  message += " m\n";
-
-  message += "Alert: ";
-  message += alert ? "YES" : "NO";
-  message += "\n";
-
-  server.send(
-    200,
-    "text/plain",
-    message
-  );
+  key = key + "=";
+  int start = data.indexOf(key);
+  if (start < 0) return "";
+  start += key.length();
+  int end = data.indexOf("&", start);
+  if (end < 0) end = data.length();
+  return data.substring(start, end);
 }
 
 // =====================================================
-// LOCATION ENDPOINT (receives from backend)
+// POLL BACKEND FOR LOCATION AND STATUS
 // =====================================================
 
-void handleLocation()
+void pollBackend()
 {
-  if (server.hasArg("lat")) {
-    latitude = server.arg("lat").toDouble();
-  }
-  if (server.hasArg("lon")) {
-    longitude = server.arg("lon").toDouble();
-  }
-  if (server.hasArg("accuracy")) {
-    gpsAccuracy = server.arg("accuracy").toDouble();
-  }
-  if (server.hasArg("distance")) {
-    distance = server.arg("distance").toDouble();
-  }
-  if (server.hasArg("alert")) {
-    alert = server.arg("alert").toDouble() > 0.5;
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (millis() - lastPollTime < POLL_INTERVAL) return;
+
+  HTTPClient http;
+  String url = String(backendUrl) + "/api/device/poll?deviceId=" + String(deviceId);
+
+  http.begin(url);
+  int code = http.GET();
+
+  if (code == 200)
+  {
+    String payload = http.getString();
+    latitude = getValue(payload, "lat").toDouble();
+    longitude = getValue(payload, "lon").toDouble();
+    gpsAccuracy = getValue(payload, "acc").toDouble();
+    distance = getValue(payload, "dist").toDouble();
+    alert = getValue(payload, "alert").toInt() > 0.5;
+
+    lastLocationReceived = millis();
+    locationReceived = true;
+
+    if (phoneLost)
+    {
+      phoneLost = false;
+      Serial.println("Phone GPS reconnected");
+      shortBeep();
+    }
+
+    Serial.println("Location update:");
+    Serial.print("  LAT: "); Serial.println(latitude, 6);
+    Serial.print("  LON: "); Serial.println(longitude, 6);
+    Serial.print("  ACC: "); Serial.print(gpsAccuracy, 1); Serial.println(" m");
+    Serial.print("  DIST: "); Serial.print(distance, 0); Serial.println(" m");
+    Serial.print("  ALERT: "); Serial.println(alert ? "YES" : "NO");
+
+    if (alert)
+    {
+      alarmBeep();
+    }
+    else
+    {
+      digitalWrite(BUZZER_PIN, LOW);
+    }
   }
 
-  lastLocationReceived = millis();
-  locationReceived = true;
-
-  // If phone was lost, mark as recovered
-  if (phoneLost) {
-    phoneLost = false;
-    Serial.println("Phone GPS reconnected");
-    shortBeep();
-  }
-
-  Serial.println("Location update:");
-  Serial.print("  LAT: "); Serial.println(latitude, 6);
-  Serial.print("  LON: "); Serial.println(longitude, 6);
-  Serial.print("  ACC: "); Serial.print(gpsAccuracy, 1); Serial.println(" m");
-  Serial.print("  DIST: "); Serial.print(distance, 0); Serial.println(" m");
-  Serial.print("  ALERT: "); Serial.println(alert ? "YES" : "NO");
-
-  // Control buzzer
-  if (alert) {
-    alarmBeep();
-  } else {
-    digitalWrite(BUZZER_PIN, LOW);
-  }
-
-  showBorderStatus();
-
-  server.send(200, "text/plain", "Location received");
+  http.end();
+  lastPollTime = millis();
 }
 
 // =====================================================
@@ -636,23 +605,23 @@ void setup()
 
   if (WiFi.status() == WL_CONNECTED)
   {
-    Serial.println("==============================");
-    Serial.println("WIFI CONNECTED!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("Signal: ");
-    Serial.print(WiFi.RSSI());
-    Serial.println(" dBm");
-    Serial.println("==============================");
+  Serial.println("==============================");
+  Serial.println("WIFI CONNECTED!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("Signal: ");
+  Serial.print(WiFi.RSSI());
+  Serial.println(" dBm");
+  Serial.println("==============================");
 
-    wifiLost = false;
-    showWiFiConnected();
-    delay(2000);
+  wifiLost = false;
+  showWiFiConnected();
+  delay(2000);
 
-    // Register with backend so it knows where to send GPS
-    registerWithBackend();
-    lastBackendRegister = millis();
-  }
+  registerWithBackend();
+  lastBackendRegister = millis();
+  lastPollTime = millis();
+}
   else
   {
     Serial.println("WIFI CONNECTION FAILED");
@@ -661,23 +630,7 @@ void setup()
     showWiFiLost();
   }
 
-  // HTTP routes
-  server.on("/", HTTP_GET, handleRoot);
-  server.on("/location", HTTP_GET, handleLocation);
-  server.on("/status", HTTP_GET, []() {
-    String json = "{\"alert\":";
-    json += alert ? "true" : "false";
-    json += ",\"distance\":";
-    json += String((int)distance);
-    json += "}";
-    server.send(200, "application/json", json);
-  });
-
-  server.begin();
-  Serial.println("HTTP server started on port 80");
-  Serial.print("Open: http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("/");
+  Serial.println("Starting polling...");
 
   shortBeep();
 }
@@ -688,8 +641,8 @@ void setup()
 
 void loop()
 {
-  server.handleClient();
   checkWiFi();
   checkPhoneConnection();
+  pollBackend();
   updateOLED();
 }

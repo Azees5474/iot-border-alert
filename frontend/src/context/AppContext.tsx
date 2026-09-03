@@ -183,6 +183,51 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(timer);
   }, []);
 
+  // Live backend location polling (so a second device can see the phone's GPS)
+  useEffect(() => {
+    const pollLocation = async () => {
+      try {
+        const loc = await locationApi.getLocation();
+        if (
+          typeof loc?.latitude === 'number' &&
+          typeof loc?.longitude === 'number' &&
+          Number.isFinite(loc.latitude) &&
+          Number.isFinite(loc.longitude) &&
+          !(loc.latitude === 0 && loc.longitude === 0) &&
+          loc.latitude >= -90 &&
+          loc.latitude <= 90 &&
+          loc.longitude >= -180 &&
+          loc.longitude <= 180
+        ) {
+          const pos: Position = {
+            lat: loc.latitude,
+            lng: loc.longitude,
+            accuracy: loc.accuracy ?? 0,
+            timestamp: loc.timestamp ? new Date(loc.timestamp).getTime() : Date.now(),
+          };
+          setCurrentPosition((prev) => {
+            if (
+              prev &&
+              prev.lat === pos.lat &&
+              prev.lng === pos.lng &&
+              prev.accuracy === pos.accuracy
+            ) {
+              return prev;
+            }
+            const { distance, breached, returned } = evaluateGeofence(pos);
+            persistAlert(pos, distance, breached, returned);
+            return pos;
+          });
+        }
+      } catch {
+        // backend may be asleep (Render free tier); ignore
+      }
+    };
+    pollLocation();
+    const timer = setInterval(pollLocation, 2000);
+    return () => clearInterval(timer);
+  }, [evaluateGeofence, persistAlert]);
+
   // Sync geofence from settings/backend on mount
   useEffect(() => {
     (async () => {
@@ -270,7 +315,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const value: AppContextType = {
     currentPosition: demoMode
       ? (currentPosition ?? DEFAULT_POSITION)
-      : (geo.position ?? currentPosition ?? DEFAULT_POSITION),
+      : (geo.position ?? currentPosition),
     geofence,
     deviceStatus,
     alerts,
