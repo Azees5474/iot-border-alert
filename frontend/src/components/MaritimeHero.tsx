@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Anchor, Radio } from "lucide-react";
 import { useAppContext } from "@/context/AppContext";
@@ -13,7 +13,6 @@ import SystemClock from "@/components/SystemClock";
  */
 const MaritimeHero = () => {
   const [videoFailed, setVideoFailed] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const { currentPosition, gpsTracking, demoMode, deviceStatus } =
     useAppContext();
   const gpsActive = gpsTracking || demoMode;
@@ -24,30 +23,26 @@ const MaritimeHero = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-abyss-950 via-abyss-900 to-panel-900">
         {!videoFailed && (
           <video
-            ref={videoRef}
-            className="absolute inset-0 w-full h-full object-cover opacity-70"
+            className="absolute inset-0 w-full h-full object-cover opacity-95"
             autoPlay
             muted
             loop
             playsInline
             poster="/videos/fishing-boat-poster.jpg"
             onError={() => setVideoFailed(true)}
-            onLoadedMetadata={(e) => {
-              // Original footage plays a little too slowly for a "moving boat" feel —
-              // nudge playback speed up without affecting audio (it's muted anyway).
-              e.currentTarget.playbackRate = 1.4;
-            }}
           >
             <source src="/videos/fishing-boat.mp4" type="video/mp4" />
           </video>
         )}
-        {/* fallback ocean texture, always present under the video for a seamless blend */}
-        <div className="absolute inset-0 tech-grid opacity-30" />
+        {/* fallback ocean texture, only shown if the video failed to load */}
+        {videoFailed && (
+          <div className="absolute inset-0 tech-grid opacity-30" />
+        )}
       </div>
 
-      {/* Gradient overlay: dark left, semi-transparent center, lighter right */}
-      <div className="absolute inset-0 bg-gradient-to-r from-abyss-950 via-abyss-950/70 to-abyss-950/30" />
-      <div className="absolute inset-0 bg-gradient-to-t from-abyss-950 via-transparent to-abyss-950/40" />
+      {/* Gradient overlay: dark left for text legibility, video stays visible toward center/right */}
+      <div className="absolute inset-0 bg-gradient-to-r from-abyss-950/95 via-abyss-950/50 to-abyss-950/10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-abyss-950/90 via-transparent to-abyss-950/10" />
 
       {/* Scanning line */}
       <div className="scan-overlay" />
