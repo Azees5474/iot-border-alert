@@ -8,8 +8,8 @@ import Alerts from '@/pages/Alerts';
 import Device from '@/pages/Device';
 import Settings from '@/pages/Settings';
 import PhoneGPS from '@/pages/PhoneGPS';
-import { Menu } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import TopBar from '@/components/TopBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 const AppContent = () => {
@@ -17,38 +17,21 @@ const AppContent = () => {
   const { demoMode } = useAppContext();
 
   return (
-    <div className="min-h-screen flex bg-ocean-light">
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 md:hidden bg-black/40 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+    <div className="min-h-screen flex bg-abyss-950">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
         {demoMode && (
-          <div className="demo-banner text-white px-4 py-3 flex items-center justify-center font-bold text-sm gap-2 relative z-50">
+          <div className="demo-banner px-4 py-2.5 flex items-center justify-center font-bold text-sm gap-2 relative z-50">
             <span className="animate-pulse-slow">⚠</span>
             <span>DEMO MODE ACTIVE — Using simulated GPS data</span>
             <span className="animate-pulse-slow">⚠</span>
           </div>
         )}
 
-        {/* Mobile header */}
-        <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200">
-          <button
-            className="p-2 rounded-lg bg-ocean-900 text-white"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu size={20} />
-          </button>
-          <h1 className="text-lg font-bold text-ocean-900">IoT Border Alert</h1>
-          <div className="w-10" />
-        </div>
+        <TopBar onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto page-enter">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/tracking" element={<LiveTracking />} />
@@ -59,6 +42,14 @@ const AppContent = () => {
             <Route path="/phone" element={<PhoneGPS />} />
           </Routes>
         </main>
+
+        <footer className="border-t border-signal-cyan/10 px-4 md:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-1 hud-label text-ink-500">
+          <span>IoT Border Alert · Maritime Safety &amp; Surveillance System</span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-status-safe pulse-safe" />
+            System Status: Operational
+          </span>
+        </footer>
       </div>
     </div>
   );

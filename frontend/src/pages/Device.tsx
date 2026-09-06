@@ -59,82 +59,77 @@ const Device = () => {
       )
     : 0;
 
+  const infoRow = (label: string, node: React.ReactNode) => (
+    <div>
+      <span className="text-xs text-ink-500">{label}</span>
+      <div className="mt-0.5">{node}</div>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Smartphone size={24} />
+        <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
+          <Smartphone size={22} className="text-signal-cyan" />
           ESP32 Device
         </h1>
-        <p className="text-gray-500">IoT border controller status</p>
+        <p className="text-ink-500 text-sm">IoT border controller status</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-card border border-gray-100 p-6 card-hover animate-slide-up" style={{ animationDelay: '0ms' }}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <Smartphone size={18} className="text-ocean-600" />
+          <div className="glass-panel rounded-xl p-6 card-hover animate-slide-up">
+            <h3 className="hud-label mb-4 flex items-center gap-1.5">
+              <Smartphone size={14} className="text-signal-cyan" />
               Device Information
             </h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Device ID</span>
-                <div className="font-medium text-gray-800">{status.deviceId || 'ESP32-001'}</div>
-              </div>
-              <div>
-                <span className="text-gray-500">Connection</span>
+              {infoRow('Device ID', <span className="hud-value font-medium text-white">{status.deviceId || 'ESP32-001'}</span>)}
+              {infoRow(
+                'Connection',
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-block w-2 h-2 rounded-full ${online ? 'bg-green-500 animate-pulse-slow' : 'bg-red-500'}`}
-                  />
-                  <span className={online ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                  <span className={`inline-block w-2 h-2 rounded-full ${online ? 'bg-status-safe pulse-safe' : 'bg-status-danger'}`} />
+                  <span className={online ? 'text-status-safe font-medium' : 'text-status-danger font-medium'}>
                     {online ? 'ONLINE' : 'OFFLINE'}
                   </span>
-                </div>
-              </div>
-              <div>
-                <span className="text-gray-500">Wi-Fi</span>
+                </div>,
+              )}
+              {infoRow(
+                'Wi-Fi',
                 <div className="flex items-center gap-2">
-                  <Wifi size={16} className="text-blue-500" />
-                  <span className="font-medium text-green-600">CONNECTED</span>
-                </div>
-              </div>
-              <div>
-                <span className="text-gray-500">IP Address</span>
-                <div className="font-medium text-gray-800 font-mono">192.168.1.100</div>
-              </div>
-              <div>
-                <span className="text-gray-500">Last Seen</span>
-                <div className="font-medium text-gray-800">{lastSeenStr}</div>
-              </div>
-              <div>
-                <span className="text-gray-500">OLED Display</span>
+                  <Wifi size={16} className="text-signal-blue" />
+                  <span className="font-medium text-status-safe">CONNECTED</span>
+                </div>,
+              )}
+              {infoRow('Last Seen', <span className="hud-value text-white">{lastSeenStr}</span>)}
+              {infoRow(
+                'OLED Display',
                 <div className="flex items-center gap-2">
-                  <Zap size={16} className="text-yellow-500" />
-                  <span className="font-medium text-green-600">CONNECTED</span>
-                </div>
-              </div>
-              <div>
-                <span className="text-gray-500">Buzzer</span>
+                  <Zap size={16} className="text-status-warn" />
+                  <span className="font-medium text-status-safe">CONNECTED</span>
+                </div>,
+              )}
+              {infoRow(
+                'Buzzer',
                 <div className="flex items-center gap-2">
-                  <Power size={16} />
-                  <span className={buzzerOn ? 'text-red-600 font-medium animate-pulse-fast' : 'text-green-600 font-medium'}>
+                  <Power size={16} className="text-ink-300" />
+                  <span className={buzzerOn ? 'text-status-danger font-medium alert-pulse' : 'text-status-safe font-medium'}>
                     {buzzerOn ? 'ACTIVE' : 'READY'}
                   </span>
-                </div>
-              </div>
-              <div>
-                <span className="text-gray-500">GPS Source</span>
+                </div>,
+              )}
+              {infoRow(
+                'GPS Source',
                 <div className="flex items-center gap-2">
-                  <MapPin size={16} className="text-blue-500" />
-                  <span className="font-medium text-blue-600">SMARTPHONE</span>
-                </div>
-              </div>
+                  <MapPin size={16} className="text-signal-blue" />
+                  <span className="font-medium text-signal-blue">SMARTPHONE</span>
+                </div>,
+              )}
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-card border border-gray-100 p-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Actions</h3>
+          <div className="glass-panel rounded-xl p-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
+            <h3 className="hud-label mb-4">Actions</h3>
             <div className="flex flex-wrap gap-3">
               <button
                 className={`btn ${buzzerOn ? 'btn-danger' : 'btn-warning'} flex items-center gap-2`}
@@ -161,8 +156,8 @@ const Device = () => {
               </button>
             </div>
             {buzzerOn && (
-              <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200 animate-pulse-slow">
-                <span className="text-red-700 font-medium flex items-center gap-2">
+              <div className="mt-4 p-3 bg-status-danger/10 rounded-lg border border-status-danger/30 animate-pulse-slow">
+                <span className="text-status-danger font-medium flex items-center gap-2 text-sm">
                   <Bell size={16} /> Buzzer is currently ACTIVE (test mode)
                 </span>
               </div>
@@ -171,46 +166,48 @@ const Device = () => {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Geofence Status</h3>
+          <div className="glass-panel rounded-xl p-6">
+            <h3 className="hud-label mb-4">Geofence Status</h3>
             <div className="space-y-3 text-sm">
               <div>
-                <span className="text-gray-500">Center</span>
-                <div className="font-mono text-gray-800">
+                <span className="text-ink-500">Center</span>
+                <div className="hud-value text-white">
                   {geofence.latitude.toFixed(6)}, {geofence.longitude.toFixed(6)}
                 </div>
               </div>
               <div>
-                <span className="text-gray-500">Radius</span>
-                <div className="font-mono text-gray-800">{geofence.radius} m</div>
+                <span className="text-ink-500">Radius</span>
+                <div className="hud-value text-white">{geofence.radius} m</div>
               </div>
               <div>
-                <span className="text-gray-500">Boundary Breach</span>
-                <div className="font-mono text-gray-800">{geofenceDistance > geofence.radius ? 'ALERT' : 'SAFE'}</div>
+                <span className="text-ink-500">Boundary Breach</span>
+                <div className={`hud-value ${geofenceDistance > geofence.radius ? 'text-status-danger' : 'text-status-safe'}`}>
+                  {geofenceDistance > geofence.radius ? 'ALERT' : 'SAFE'}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Alert Status</h3>
+          <div className="glass-panel rounded-xl p-6">
+            <h3 className="hud-label mb-4">Alert Status</h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">Current Alert</span>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-ink-500">Current Alert</span>
                 <span
-                  className={`font-medium ${geofenceDistance > geofence.radius ? 'text-red-600' : 'text-green-600'}`}
+                  className={`font-medium ${geofenceDistance > geofence.radius ? 'text-status-danger' : 'text-status-safe'}`}
                 >
                   {geofenceDistance > geofence.radius ? 'TRIGGERED' : 'CLEAR'}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">Buzzer Status</span>
-                <span className={buzzerOn ? 'text-red-600 font-medium' : 'text-gray-600'}>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-ink-500">Buzzer Status</span>
+                <span className={buzzerOn ? 'text-status-danger font-medium' : 'text-ink-300'}>
                   {buzzerOn ? 'ON' : 'OFF'}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">OLED Display</span>
-                <span className="text-green-600 font-medium">ACTIVE</span>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-ink-500">OLED Display</span>
+                <span className="text-status-safe font-medium">ACTIVE</span>
               </div>
             </div>
           </div>

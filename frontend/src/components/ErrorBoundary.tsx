@@ -27,13 +27,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold text-red-600 mb-2">Something went wrong</h2>
-            <p className="text-gray-600 mb-4 text-sm">
+        <div className="min-h-screen flex items-center justify-center bg-abyss-950 p-4">
+          <div className="glass-panel rounded-xl p-6 max-w-md w-full border-l-2 border-l-status-danger/70">
+            <h2 className="text-xl font-display font-bold text-status-danger mb-2">System Fault Detected</h2>
+            <p className="text-ink-300 mb-4 text-sm">
               {this.state.error?.message || 'An unexpected error occurred'}
             </p>
-            <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40 mb-4">
+            <pre className="bg-panel-900 text-ink-500 p-3 rounded text-xs overflow-auto max-h-40 mb-4 font-mono">
               {this.state.error?.stack}
             </pre>
             <button

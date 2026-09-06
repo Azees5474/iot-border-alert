@@ -85,53 +85,50 @@ const Geofence = () => {
       )
     : null;
 
+  const inputClass =
+    'w-full px-3 py-2 bg-panel-900 border border-signal-cyan/15 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-signal-cyan/50 focus:border-signal-cyan/50 transition-all font-mono text-sm';
+
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Wind size={24} />
+        <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
+          <Wind size={22} className="text-signal-cyan" />
           Geofence Configuration
         </h1>
-        <p className="text-gray-500">Set the geofence boundary center and radius</p>
+        <p className="text-ink-500 text-sm">Set the geofence boundary center and radius</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-card border border-gray-100 p-6 animate-slide-up">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Wind size={18} className="text-ocean-600" />
+        <div className="glass-panel rounded-xl p-6 animate-slide-up">
+          <h3 className="hud-label mb-4 flex items-center gap-1.5">
+            <Wind size={14} className="text-signal-cyan" />
             Edit Geofence
           </h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Latitude
-              </label>
+              <label className="block text-xs text-ink-500 mb-1">Latitude</label>
               <input
                 type="number"
                 step="0.000001"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-ocean-500 transition-all"
+                className={inputClass}
                 value={form.latitude}
                 onChange={(e) => setForm({ ...form, latitude: Number(e.target.value) })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Longitude
-              </label>
+              <label className="block text-xs text-ink-500 mb-1">Longitude</label>
               <input
                 type="number"
                 step="0.000001"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-ocean-500 transition-all"
+                className={inputClass}
                 value={form.longitude}
                 onChange={(e) => setForm({ ...form, longitude: Number(e.target.value) })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Radius (meters)
-              </label>
+              <label className="block text-xs text-ink-500 mb-1">Radius (meters)</label>
               <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-ocean-500 transition-all"
+                className={inputClass}
                 value={form.radius}
                 onChange={(e) => setForm({ ...form, radius: Number(e.target.value) })}
               >
@@ -167,43 +164,49 @@ const Geofence = () => {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-card border border-gray-100 p-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Current Configuration</h3>
+          <div className="glass-panel rounded-xl p-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
+            <h3 className="hud-label mb-4">Current Configuration</h3>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Latitude</span>
-                <span className="font-mono font-medium">{geofence.latitude.toFixed(6)}</span>
+                <span className="text-ink-500">Latitude</span>
+                <span className="hud-value">{geofence.latitude.toFixed(6)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Longitude</span>
-                <span className="font-mono font-medium">{geofence.longitude.toFixed(6)}</span>
+                <span className="text-ink-500">Longitude</span>
+                <span className="hud-value">{geofence.longitude.toFixed(6)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Radius</span>
-                <span className="font-mono font-medium">{geofence.radius} m</span>
+                <span className="text-ink-500">Radius</span>
+                <span className="hud-value">{geofence.radius} m</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-card border border-gray-100 p-6 animate-slide-up" style={{ animationDelay: '200ms' }}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <MapPin size={18} className="text-ocean-600" /> Your Position vs Geofence
+          <div className="glass-panel rounded-xl p-6 animate-slide-up" style={{ animationDelay: '200ms' }}>
+            <h3 className="hud-label mb-4 flex items-center gap-1.5">
+              <MapPin size={14} className="text-signal-cyan" /> Your Position vs Geofence
             </h3>
             {distanceFromPhone ? (
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Distance</span>
-                  <span className="font-mono font-medium">{distanceFromPhone.distance} m</span>
+                  <span className="text-ink-500">Distance</span>
+                  <span className="hud-value">{distanceFromPhone.distance} m</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Status</span>
-                  <span className={distanceFromPhone.inside ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                    {distanceFromPhone.inside ? 'Inside' : 'Outside'}
+                <div className="flex justify-between items-center">
+                  <span className="text-ink-500">Status</span>
+                  <span
+                    className={`font-semibold px-2.5 py-0.5 rounded-full text-xs ${
+                      distanceFromPhone.inside
+                        ? 'bg-status-safe/15 text-status-safe'
+                        : 'bg-status-danger/15 text-status-danger'
+                    }`}
+                  >
+                    {distanceFromPhone.inside ? 'INSIDE' : 'OUTSIDE'}
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">Start tracking to see your position relative to this geofence.</p>
+              <p className="text-ink-500 text-sm">Start tracking to see your position relative to this geofence.</p>
             )}
           </div>
         </div>

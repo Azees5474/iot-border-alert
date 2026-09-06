@@ -85,7 +85,7 @@ const CenterMapBtn = ({ pos }: { pos: LatLngTuple }) => {
   const map = useMap();
   return (
     <button
-      className="absolute top-4 right-4 z-[1000] bg-white/90 backdrop-blur-sm rounded-xl shadow-lg px-4 py-2.5 text-sm font-medium hover:bg-white transition-all active:scale-95 border border-ocean-200 text-ocean-700 hover:text-ocean-800"
+      className="absolute top-4 right-4 z-[1000] glass-panel rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-panel-800/90 transition-all active:scale-95 text-ink-100"
       onClick={() => map.setView(pos, 20)}
     >
       Center Map
@@ -97,7 +97,7 @@ const LocatePhoneBtn = ({ pos }: { pos: LatLngTuple | null }) => {
   const map = useMap();
   return (
     <button
-      className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm rounded-xl shadow-lg px-4 py-2.5 text-sm font-medium hover:bg-white transition-all active:scale-95 border border-ocean-200 text-ocean-700 hover:text-ocean-800 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="absolute top-4 left-4 z-[1000] glass-panel rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-panel-800/90 transition-all active:scale-95 text-ink-100 disabled:opacity-50 disabled:cursor-not-allowed"
       onClick={() => {
         if (pos) map.flyTo(pos, 21, { duration: 1.5 });
       }}
@@ -123,7 +123,7 @@ const MapView = ({
       : '#ef4444';
 
   return (
-    <div className="relative h-[500px] w-full rounded-2xl shadow-card border border-ocean-100 overflow-hidden map-glow animate-scale-in">
+    <div className="relative h-[500px] w-full rounded-2xl border border-signal-cyan/10 overflow-hidden map-glow animate-scale-in">
       <FixLeafletAssets />
       <MapContainer
         center={center}
@@ -132,8 +132,8 @@ const MapView = ({
         scrollWheelZoom={true}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         <FlyToPhone pos={phoneMarker} />
         <CenterMapBtn pos={geofenceCenter} />
@@ -168,15 +168,15 @@ const MapView = ({
       </MapContainer>
 
       {/* Legend overlay */}
-      <div className="absolute bottom-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-ocean-100 p-3">
-        <div className="flex items-center gap-4 text-xs">
+      <div className="absolute bottom-4 right-4 z-[1000] glass-panel rounded-lg p-3">
+        <div className="flex items-center gap-4 hud-label">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-blue-500" />
-            <span className="text-gray-700 font-medium">Phone</span>
+            <span className="w-3 h-3 rounded-full bg-signal-blue" />
+            <span className="text-ink-100 normal-case tracking-normal font-medium">Phone</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-4 h-3 rounded-full bg-green-500/30 border-2 border-green-500" />
-            <span className="text-gray-700 font-medium">Zone</span>
+            <span className="w-4 h-3 rounded-full bg-status-safe/30 border-2 border-status-safe" />
+            <span className="text-ink-100 normal-case tracking-normal font-medium">Zone</span>
           </div>
         </div>
       </div>

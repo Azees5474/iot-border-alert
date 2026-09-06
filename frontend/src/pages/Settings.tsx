@@ -8,6 +8,59 @@ import type { Settings, Geofence } from '@/types';
 const RADIUS_OPTIONS = [2, 5, 20, 50, 100, 200, 500, 1000];
 const INTERVAL_OPTIONS = [1000, 2000, 5000, 10000];
 
+const inputClass =
+  'w-full px-3 py-2 bg-panel-900 border border-signal-cyan/15 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-signal-cyan/50 focus:border-signal-cyan/50 transition-all text-sm';
+
+const SettingsPanel = ({
+  title,
+  icon,
+  children,
+  delay = 0,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  delay?: number;
+}) => (
+  <div className="glass-panel rounded-xl p-6 animate-slide-up" style={{ animationDelay: `${delay}ms` }}>
+    <h3 className="hud-label mb-4 flex items-center gap-1.5">
+      {icon}
+      {title}
+    </h3>
+    {children}
+  </div>
+);
+
+const ToggleRow = ({
+  label,
+  description,
+  active,
+  onClick,
+  activeClass = 'bg-signal-cyan/15 text-signal-cyan',
+}: {
+  label: string;
+  description: string;
+  active: boolean;
+  onClick: () => void;
+  activeClass?: string;
+}) => (
+  <div className="flex items-center justify-between">
+    <div>
+      <span className="font-medium text-ink-100 text-sm">{label}</span>
+      <p className="text-xs text-ink-500">{description}</p>
+    </div>
+    <button
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all text-sm ${
+        active ? activeClass : 'bg-panel-900 text-ink-500'
+      }`}
+      onClick={onClick}
+    >
+      {active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+      {active ? 'Enabled' : 'Disabled'}
+    </button>
+  </div>
+);
+
 const SettingsPage = () => {
   const { setGeofence, setDemoMode } = useAppContext();
   const [form, setForm] = useState<Settings>(getSettings());
@@ -69,34 +122,30 @@ const SettingsPage = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <SettingsIcon size={24} />
+        <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
+          <SettingsIcon size={22} className="text-signal-cyan" />
           Settings
         </h1>
-        <p className="text-gray-500">Configure device, geofence, and application preferences</p>
+        <p className="text-ink-500 text-sm">Configure device, geofence, and application preferences</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-card border border-gray-100 p-6 animate-slide-up">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <Smartphone size={18} className="text-ocean-600" />
-          Device
-        </h3>
+      <SettingsPanel title="Device" icon={<Smartphone size={14} className="text-signal-cyan" />}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Device ID</label>
+            <label className="block text-xs text-ink-500 mb-1">Device ID</label>
             <input
               type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-ocean-500 transition-all"
+              className={inputClass}
               value={form.deviceId}
               onChange={(e) => setForm({ ...form, deviceId: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">GPS Update Interval (ms)</label>
+            <label className="block text-xs text-ink-500 mb-1">GPS Update Interval (ms)</label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-ocean-500 transition-all"
+              className={inputClass}
               value={form.gpsInterval}
               onChange={(e) => setForm({ ...form, gpsInterval: Number(e.target.value) })}
             >
@@ -108,46 +157,36 @@ const SettingsPage = () => {
             </select>
           </div>
         </div>
-      </div>
+      </SettingsPanel>
 
-      <div className="bg-white rounded-xl shadow-card border border-gray-100 p-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <Wind size={18} className="text-ocean-600" />
-          Geofence
-        </h3>
+      <SettingsPanel title="Geofence" icon={<Wind size={14} className="text-signal-cyan" />} delay={80}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+            <label className="block text-xs text-ink-500 mb-1">Latitude</label>
             <input
               type="number"
               step="0.000001"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-ocean-500 transition-all"
+              className={inputClass}
               value={form.geofenceLat}
-              onChange={(e) =>
-                setForm({ ...form, geofenceLat: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, geofenceLat: Number(e.target.value) })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+            <label className="block text-xs text-ink-500 mb-1">Longitude</label>
             <input
               type="number"
               step="0.000001"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-ocean-500 transition-all"
+              className={inputClass}
               value={form.geofenceLng}
-              onChange={(e) =>
-                setForm({ ...form, geofenceLng: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, geofenceLng: Number(e.target.value) })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Radius</label>
+            <label className="block text-xs text-ink-500 mb-1">Radius</label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-ocean-500 transition-all"
+              className={inputClass}
               value={form.geofenceRadius}
-              onChange={(e) =>
-                setForm({ ...form, geofenceRadius: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, geofenceRadius: Number(e.target.value) })}
             >
               {RADIUS_OPTIONS.map((r) => (
                 <option key={r} value={r}>
@@ -157,69 +196,31 @@ const SettingsPage = () => {
             </select>
           </div>
         </div>
-      </div>
+      </SettingsPanel>
 
-      <div className="bg-white rounded-xl shadow-card border border-gray-100 p-6 animate-slide-up" style={{ animationDelay: '200ms' }}>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <Monitor size={18} className="text-ocean-600" />
-          Toggles
-        </h3>
+      <SettingsPanel title="Toggles" icon={<Monitor size={14} className="text-signal-cyan" />} delay={160}>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-medium text-gray-700">Alert Enabled</span>
-              <p className="text-sm text-gray-500">Enable breach alerts</p>
-            </div>
-            <button
-              className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-all ${
-                form.alertEnabled
-                  ? 'bg-ocean-100 text-ocean-700'
-                  : 'bg-gray-100 text-gray-500'
-              }`}
-              onClick={() => handleToggle('alertEnabled')}
-            >
-              {form.alertEnabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-              {form.alertEnabled ? 'Enabled' : 'Disabled'}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-medium text-gray-700">Buzzer Enabled</span>
-              <p className="text-sm text-gray-500">Sound buzzer on breach</p>
-            </div>
-            <button
-              className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-all ${
-                form.buzzerEnabled
-                  ? 'bg-ocean-100 text-ocean-700'
-                  : 'bg-gray-100 text-gray-500'
-              }`}
-              onClick={() => handleToggle('buzzerEnabled')}
-            >
-              {form.buzzerEnabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-              {form.buzzerEnabled ? 'Enabled' : 'Disabled'}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-medium text-gray-700">Demo Mode</span>
-              <p className="text-sm text-gray-500">Simulate GPS positions for presentations</p>
-            </div>
-            <button
-              className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-all ${
-                form.demoMode
-                  ? 'bg-fishing-100 text-fishing-700'
-                  : 'bg-gray-100 text-gray-500'
-              }`}
-              onClick={() => handleToggle('demoMode')}
-            >
-              {form.demoMode ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-              {form.demoMode ? 'Enabled' : 'Disabled'}
-            </button>
-          </div>
+          <ToggleRow
+            label="Alert Enabled"
+            description="Enable breach alerts"
+            active={form.alertEnabled}
+            onClick={() => handleToggle('alertEnabled')}
+          />
+          <ToggleRow
+            label="Buzzer Enabled"
+            description="Sound buzzer on breach"
+            active={form.buzzerEnabled}
+            onClick={() => handleToggle('buzzerEnabled')}
+          />
+          <ToggleRow
+            label="Demo Mode"
+            description="Simulate GPS positions for presentations"
+            active={form.demoMode}
+            activeClass="bg-status-warn/15 text-status-warn"
+            onClick={() => handleToggle('demoMode')}
+          />
         </div>
-      </div>
+      </SettingsPanel>
 
       <div className="flex gap-3">
         <button
@@ -227,7 +228,7 @@ const SettingsPage = () => {
           onClick={handleSave}
           disabled={loading}
         >
-          {loading ? <RefreshCw size={16} className="animate-spin" /> : saved ? <Save size={16} /> : <Save size={16} />}
+          {loading ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
           {loading ? 'Saving...' : saved ? 'Saved!' : 'Save Settings'}
         </button>
         <button className="btn btn-outline flex items-center gap-2" onClick={handleReset}>

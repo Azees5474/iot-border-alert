@@ -32,9 +32,37 @@ module.exports = {
           700: '#c2410c',
         },
       },
+      colors: {
+        abyss: {
+          950: '#020B14',
+          900: '#031521',
+          800: '#061A28',
+        },
+        panel: {
+          900: '#071D2C',
+          800: '#092436',
+          700: '#0B2A3D',
+        },
+        signal: {
+          cyan: '#22D3EE',
+          blue: '#38BDF8',
+          deep: '#0EA5E9',
+        },
+        ink: {
+          100: '#F8FAFC',
+          300: '#CBD5E1',
+          500: '#94A3B8',
+        },
+        status: {
+          safe: '#22C55E',
+          warn: '#F59E0B',
+          danger: '#EF4444',
+        },
+      },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        display: ['"Space Grotesk"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       animation: {
         'float': 'float 6s ease-in-out infinite',
@@ -53,6 +81,10 @@ module.exports = {
         'ripple': 'ripple 1.5s ease-out infinite',
         'boat-rock': 'boatRock 4s ease-in-out infinite',
         'bubble': 'bubble 3s ease-in-out infinite',
+        'radar-sweep': 'radarSweep 4s linear infinite',
+        'scan-line': 'scanLine 3.5s ease-in-out infinite',
+        'hud-fade': 'hudFade 0.8s ease-out forwards',
+        'grid-drift': 'gridDrift 30s linear infinite',
       },
       keyframes: {
         float: {
@@ -103,6 +135,22 @@ module.exports = {
         bubble: {
           '0%, 100%': { transform: 'translateY(0) scale(1)', opacity: '0.6' },
           '50%': { transform: 'translateY(-8px) scale(1.05)', opacity: '1' },
+        },
+        radarSweep: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        scanLine: {
+          '0%, 100%': { transform: 'translateY(0%)', opacity: '0.7' },
+          '50%': { transform: 'translateY(2000%)', opacity: '0.2' },
+        },
+        hudFade: {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        gridDrift: {
+          '0%': { backgroundPosition: '0 0' },
+          '100%': { backgroundPosition: '80px 80px' },
         },
       },
       backgroundImage: {

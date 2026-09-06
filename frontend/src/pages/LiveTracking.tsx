@@ -127,14 +127,14 @@ const LiveTracking = () => {
     : [geofence.latitude, geofence.longitude];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <MapPin size={24} />
-            Live Tracking
+          <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
+            <MapPin size={22} className="text-signal-cyan" />
+            Live Vessel Tracking
           </h1>
-          <p className="text-gray-500">Real-time GPS location & geofence monitoring</p>
+          <p className="text-ink-500 text-sm">Real-time GPS location &amp; geofence monitoring</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -154,7 +154,7 @@ const LiveTracking = () => {
       </div>
 
       {demoMode && (
-        <div className="demo-banner text-white px-4 py-3 flex items-center justify-between rounded-xl animate-slide-up">
+        <div className="demo-banner px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl animate-slide-up">
           <span className="font-bold flex items-center gap-2">
             <span className="animate-pulse-slow text-lg">⚠</span>
             DEMO MODE ACTIVE
@@ -177,69 +177,79 @@ const LiveTracking = () => {
         </div>
       )}
 
-      <div className="relative">
-        <MapView
-          center={center as [number, number]}
-          geofenceCenter={[geofence.latitude, geofence.longitude]}
-          geofenceRadius={geofence.radius}
-          phoneMarker={currentPosition ? [currentPosition.lat, currentPosition.lng] : null}
-          showGeofenceCircle={true}
-          inside={geofenceResult.inside}
-        />
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-2">
+          <MapView
+            center={center as [number, number]}
+            geofenceCenter={[geofence.latitude, geofence.longitude]}
+            geofenceRadius={geofence.radius}
+            phoneMarker={currentPosition ? [currentPosition.lat, currentPosition.lng] : null}
+            showGeofenceCircle={true}
+            inside={geofenceResult.inside}
+          />
+        </div>
 
-        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-ocean-100 p-4 min-w-[200px] animate-slide-in-right">
-          <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
-            <Navigation size={14} className="text-ocean-600" /> Live Coordinates
+        {/* Vessel status side panel */}
+        <div className="glass-panel rounded-xl p-5 h-fit">
+          <h3 className="hud-label mb-4 flex items-center gap-1.5">
+            <Navigation size={14} className="text-signal-cyan" /> Vessel Status
           </h3>
           {currentPosition ? (
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Latitude</span>
-                <span className="font-mono font-medium">{currentPosition.lat.toFixed(6)}</span>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-ink-500">Device</span>
+                <span className={`flex items-center gap-1.5 font-medium ${gpsTracking ? 'text-status-safe' : 'text-ink-500'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${gpsTracking ? 'bg-status-safe pulse-safe' : 'bg-ink-500'}`} />
+                  {gpsTracking ? 'ONLINE' : 'IDLE'}
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Longitude</span>
-                <span className="font-mono font-medium">{currentPosition.lng.toFixed(6)}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-ink-500">Latitude</span>
+                <span className="hud-value">{currentPosition.lat.toFixed(6)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Accuracy</span>
-                <span className="font-mono font-medium">{currentPosition.accuracy} m</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-ink-500">Longitude</span>
+                <span className="hud-value">{currentPosition.lng.toFixed(6)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Distance</span>
-                <span className="font-mono font-medium">{geofenceResult.distance} m</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-ink-500">Accuracy</span>
+                <span className="hud-value">{currentPosition.accuracy} m</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Status</span>
-                <span className={geofenceResult.inside ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                  {geofenceResult.inside ? 'Inside' : 'Outside'}
+              <div className="flex justify-between text-sm">
+                <span className="text-ink-500">Distance</span>
+                <span className="hud-value">{geofenceResult.distance} m</span>
+              </div>
+              <div className="flex justify-between text-sm items-center pt-2 border-t border-signal-cyan/10">
+                <span className="text-ink-500">Status</span>
+                <span className={`font-semibold text-sm ${geofenceResult.inside ? 'text-status-safe' : 'text-status-danger'}`}>
+                  {geofenceResult.inside ? 'SAFE ZONE' : 'BOUNDARY BREACH'}
                 </span>
               </div>
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">Waiting for GPS…</p>
+            <p className="text-ink-500 text-sm">Waiting for GPS…</p>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+        <div className="glass-panel rounded-xl p-4">
+          <div className="flex items-center gap-2 hud-label mb-1">
             <Wind size={14} /> Geofence Radius
           </div>
-          <div className="text-xl font-bold text-gray-800">{geofence.radius} m</div>
+          <div className="text-xl font-display font-semibold text-white">{geofence.radius} m</div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+        <div className="glass-panel rounded-xl p-4">
+          <div className="flex items-center gap-2 hud-label mb-1">
             <Wifi size={14} /> GPS Source
           </div>
-          <div className="text-xl font-bold text-gray-800">{demoMode ? 'Simulated' : gpsTracking ? 'Smartphone' : 'Idle'}</div>
+          <div className="text-xl font-display font-semibold text-white">{demoMode ? 'Simulated' : gpsTracking ? 'Smartphone' : 'Idle'}</div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+        <div className="glass-panel rounded-xl p-4">
+          <div className="flex items-center gap-2 hud-label mb-1">
             <MapPin size={14} /> Tracking
           </div>
-          <div className={`text-xl font-bold ${gpsTracking ? 'text-green-600' : 'text-gray-400'}`}>
+          <div className={`text-xl font-display font-semibold ${gpsTracking ? 'text-status-safe' : 'text-ink-500'}`}>
             {gpsTracking ? 'ON' : 'OFF'}
           </div>
         </div>
