@@ -90,13 +90,23 @@ const unsigned long POLL_INTERVAL = 1000;          // Poll every 1s for fast buz
 
 void playBuzzer(unsigned long durationMs)
 {
+  if (durationMs < 40) durationMs = 40;
+
+  // 1. Steady HIGH burst: Drives Active Buzzers at full loudness
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(durationMs / 2);
+  digitalWrite(BUZZER_PIN, LOW);
+  delay(15);
+
+  // 2. 2000Hz Square Wave: Drives Passive Buzzers at full resonant volume
   unsigned long start = millis();
-  while (millis() - start < durationMs)
+  unsigned long toneDuration = durationMs / 2;
+  while (millis() - start < toneDuration)
   {
     digitalWrite(BUZZER_PIN, HIGH);
-    delayMicroseconds(200); // 2500Hz oscillation works on BOTH active and passive buzzers
+    delayMicroseconds(250);
     digitalWrite(BUZZER_PIN, LOW);
-    delayMicroseconds(200);
+    delayMicroseconds(250);
   }
   digitalWrite(BUZZER_PIN, LOW);
 }
