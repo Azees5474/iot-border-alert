@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import MapView from '@/components/MapView';
 import { checkGeofence, headingToOffset } from '@/utils/geofence';
-import { Play, Pause, Wifi, Navigation, MapPin, Wind } from 'lucide-react';
+import { Play, Pause, Wifi, Navigation, MapPin, Wind, Smartphone } from 'lucide-react';
 
 const LiveTracking = () => {
   const {
@@ -14,6 +14,7 @@ const LiveTracking = () => {
     demoMode,
     setDemoMode,
     updatePosition,
+    phoneName,
   } = useAppContext();
 
   const [simAnimating, setSimAnimating] = useState(false);
@@ -186,6 +187,7 @@ const LiveTracking = () => {
             phoneMarker={currentPosition ? [currentPosition.lat, currentPosition.lng] : null}
             showGeofenceCircle={true}
             inside={geofenceResult.inside}
+            phoneName={phoneName}
           />
         </div>
 
@@ -198,9 +200,16 @@ const LiveTracking = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-ink-500">Device</span>
+                <span className="hud-value font-medium text-signal-cyan flex items-center gap-1.5">
+                  <Smartphone size={14} className="text-signal-cyan" />
+                  {phoneName}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-ink-500">Status</span>
                 <span className={`flex items-center gap-1.5 font-medium ${gpsTracking ? 'text-status-safe' : 'text-ink-500'}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${gpsTracking ? 'bg-status-safe pulse-safe' : 'bg-ink-500'}`} />
-                  {gpsTracking ? 'ONLINE' : 'IDLE'}
+                  {gpsTracking ? 'TRACKING LIVE' : 'IDLE'}
                 </span>
               </div>
               <div className="flex justify-between text-sm">

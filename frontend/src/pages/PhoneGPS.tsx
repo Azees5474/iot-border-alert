@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import useGeolocation from '@/hooks/useGeolocation';
-import { Check, X, Play, Pause, Crosshair, Wifi } from 'lucide-react';
+import { Check, X, Play, Pause, Crosshair, Wifi, Smartphone, Edit2 } from 'lucide-react';
 
 const PhoneGPS = () => {
-  const { updatePosition, startTracking, stopTracking } = useAppContext();
+  const { updatePosition, startTracking, stopTracking, phoneName, setPhoneName } = useAppContext();
   const geo = useGeolocation();
 
   const [permission, setPermission] = useState<'granted' | 'denied' | 'unknown'>('unknown');
   const [gpsStatus, setGpsStatus] = useState<'active' | 'inactive'>('inactive');
+  const [editingName, setEditingName] = useState(false);
+  const [tempName, setTempName] = useState(phoneName);
+
+  useEffect(() => {
+    setTempName(phoneName);
+  }, [phoneName]);
 
   useEffect(() => {
     if (geo.isTracking) {
@@ -20,9 +26,9 @@ const PhoneGPS = () => {
 
   useEffect(() => {
     if (geo.currentPosition) {
-      updatePosition(geo.currentPosition);
+      updatePosition({ ...geo.currentPosition, deviceName: phoneName });
     }
-  }, [geo.currentPosition, updatePosition]);
+  }, [geo.currentPosition, updatePosition, phoneName]);
 
   useEffect(() => {
     const checkPermission = async () => {
@@ -68,7 +74,74 @@ const PhoneGPS = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
+          {/* Phone Name Card */}
           <div className="glass-panel rounded-xl p-6 animate-slide-up">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="hud-label flex items-center gap-1.5">
+                <Smartphone size={14} className="text-signal-cyan" />
+                Phone Device Identifier
+              </h3>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-signal-cyan bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                Shown on Map
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {editingName ? (
+                <div className="flex items-center gap-2 w-full">
+                  <input
+                    type="text"
+                    className="bg-panel-900 border border-signal-cyan/40 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-signal-cyan w-full"
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    placeholder="e.g. Captain's Phone"
+                  />
+                  <button
+                    className="btn btn-primary btn-sm py-1.5 text-xs font-semibold"
+                    onClick={() => {
+                      if (tempName.trim()) {
+                        setPhoneName(tempName.trim());
+                      }
+                      setEditingName(false);
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm py-1.5 text-xs"
+                    onClick={() => {
+                      setTempName(phoneName);
+                      setEditingName(false);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <div className="text-lg font-bold text-white flex items-center gap-2">
+                      <Smartphone size={18} className="text-signal-cyan" />
+                      {phoneName}
+                    </div>
+                    <p className="text-xs text-ink-500 mt-0.5">
+                      This name appears on the live map and breach alerts.
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-outline btn-sm text-xs py-1 flex items-center gap-1"
+                    onClick={() => {
+                      setTempName(phoneName);
+                      setEditingName(true);
+                    }}
+                  >
+                    <Edit2 size={12} /> Rename
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-xl p-6 animate-slide-up" style={{ animationDelay: '50ms' }}>
             <h3 className="hud-label mb-4 flex items-center gap-1.5">
               <Crosshair size={14} className="text-signal-cyan" />
               GPS Status

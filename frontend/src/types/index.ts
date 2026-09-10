@@ -3,6 +3,7 @@ export interface Position {
   lng: number;
   accuracy: number;
   timestamp: number;
+  deviceName?: string;
 }
 
 export interface Geofence {
@@ -47,6 +48,8 @@ export interface AppContextType {
   alerts: Alert[];
   demoMode: boolean;
   gpsTracking: boolean;
+  phoneName: string;
+  setPhoneName: (name: string) => void;
   startTracking: () => void;
   stopTracking: () => void;
   updatePosition: (pos: Position) => void;

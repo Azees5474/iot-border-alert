@@ -29,6 +29,7 @@ let currentLocation = {
   longitude: 80.270718,
   accuracy: 0,
   timestamp: new Date().toISOString(),
+  deviceName: 'Phone GPS',
 };
 
 let geofence = {
@@ -70,7 +71,7 @@ function computeStatus() {
   );
   const inside = distance <= geofence.radius;
   const alert = !inside;
-  return { inside, distance: Math.round(distance), alert };
+  return { inside, distance: Math.round(distance), alert, deviceName: currentLocation.deviceName };
 }
 
 function addAlertEntry(inside, distance) {
@@ -83,6 +84,7 @@ function addAlertEntry(inside, distance) {
     distance: Math.round(distance),
     status: inside ? 'SAFE' : 'BREACHED',
     alert: !inside,
+    deviceName: currentLocation.deviceName,
     timestamp: Date.now(),
   };
   alertHistory.push(alertEntry);
@@ -134,7 +136,7 @@ app.get('/api/location', (req, res) => {
 });
 
 app.post('/api/location', (req, res) => {
-  const { latitude, longitude, accuracy, timestamp } = req.body;
+  const { latitude, longitude, accuracy, timestamp, deviceName } = req.body;
   if (typeof latitude !== 'number' || typeof longitude !== 'number') {
     return res.status(400).json({ error: 'latitude and longitude are required numbers' });
   }
@@ -152,6 +154,7 @@ app.post('/api/location', (req, res) => {
     longitude,
     accuracy: accuracy ?? currentLocation.accuracy,
     timestamp: timestamp ?? new Date().toISOString(),
+    deviceName: deviceName || currentLocation.deviceName || 'Phone GPS',
   };
   evaluateAndMaybeAlert();
   forwardLocationToDevices();

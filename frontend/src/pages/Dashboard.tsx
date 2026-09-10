@@ -12,6 +12,7 @@ const Dashboard = () => {
     alerts,
     gpsTracking,
     demoMode,
+    phoneName,
   } = useAppContext();
 
   const gpsActive = gpsTracking || demoMode;
@@ -43,7 +44,7 @@ const Dashboard = () => {
               title="GPS Signal"
               icon={<Satellite size={16} />}
               status={gpsActive ? "active" : "inactive"}
-              value={gpsActive ? "ACTIVE" : "IDLE"}
+              value={gpsActive ? phoneName : "IDLE"}
               subtext={
                 currentPosition
                   ? `${currentPosition.lat.toFixed(6)}, ${currentPosition.lng.toFixed(6)}`

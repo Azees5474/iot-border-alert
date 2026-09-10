@@ -18,6 +18,7 @@ import type {
 import { checkGeofence } from '@/utils/geofence';
 import { locationApi, geofenceApi, deviceApi, alertApi } from '@/services/api';
 import { getSettings, saveSettings, getAlerts as getStoredAlerts, clearAlerts as clearStoredAlerts } from '@/utils/storage';
+import { getStoredPhoneName, saveStoredPhoneName } from '@/utils/device';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -84,9 +85,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [demoMode, setDemoMode] = useState(settings.demoMode ?? false);
   const [gpsTracking, setGpsTrackingState] = useState(false);
+  const [phoneName, setPhoneNameState] = useState<string>(() => getStoredPhoneName());
   const [currentPosition, setCurrentPosition] = useState<Position | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>(() => getStoredAlerts());
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>(DEFAULT_DEVICE);
+
+  const setPhoneName = useCallback((name: string) => {
+    setPhoneNameState(name);
+    saveStoredPhoneName(name);
+  }, []);
 
   const geo = useGeolocationWatch(gpsTracking && !demoMode);
 
@@ -147,12 +154,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           longitude: pos.lng,
           accuracy: pos.accuracy,
           timestamp: new Date(pos.timestamp).toISOString(),
+          deviceName: pos.deviceName || phoneName,
         });
       } catch {
         // best effort
       }
     },
-    [],
+    [phoneName],
   );
 
   // React to real GPS position changes
@@ -204,7 +212,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             lng: loc.longitude,
             accuracy: loc.accuracy ?? 0,
             timestamp: loc.timestamp ? new Date(loc.timestamp).getTime() : Date.now(),
+            deviceName: loc.deviceName,
           };
+          if (loc.deviceName && !gpsTracking) {
+            setPhoneNameState((prev) => loc.deviceName || prev);
+          }
           setCurrentPosition((prev) => {
             if (
               prev &&
@@ -321,6 +333,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     alerts,
     demoMode,
     gpsTracking,
+    phoneName,
+    setPhoneName,
     startTracking,
     stopTracking,
     updatePosition,

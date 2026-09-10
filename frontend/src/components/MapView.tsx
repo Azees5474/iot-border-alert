@@ -9,7 +9,7 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Layers, Compass, Crosshair } from 'lucide-react';
+import { Layers, Compass, Crosshair, Smartphone } from 'lucide-react';
 
 type LatLngTuple = [number, number];
 
@@ -22,6 +22,7 @@ interface MapViewProps {
   phoneMarker: LatLngTuple | null;
   showGeofenceCircle: boolean;
   inside: boolean;
+  phoneName?: string;
 }
 
 const BASEMAPS: Record<
@@ -172,6 +173,7 @@ const MapView = ({
   phoneMarker,
   showGeofenceCircle,
   inside,
+  phoneName,
 }: MapViewProps) => {
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
 
@@ -240,7 +242,10 @@ const MapView = ({
           <Marker position={phoneMarker} icon={PhoneIcon}>
             <Popup>
               <div className="text-xs space-y-1">
-                <p className="font-bold text-signal-cyan">Vessel Position</p>
+                <p className="font-bold text-signal-cyan flex items-center gap-1.5">
+                  <Smartphone size={13} className="text-signal-cyan" />
+                  {phoneName || 'Phone GPS'}
+                </p>
                 <p className="font-mono text-white">
                   {phoneMarker[0].toFixed(6)}, {phoneMarker[1].toFixed(6)}
                 </p>
@@ -256,7 +261,7 @@ const MapView = ({
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-signal-cyan shadow-sm" />
             <span className="text-ink-100 normal-case tracking-normal font-medium">
-              Vessel
+              {phoneName || 'Phone'}
             </span>
           </div>
           <div className="flex items-center gap-1.5">

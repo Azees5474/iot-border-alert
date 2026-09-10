@@ -27,6 +27,7 @@ export const locationApi = {
     longitude: number;
     accuracy: number;
     timestamp: string;
+    deviceName?: string;
   }) => {
     const res = await api.post('/location', data);
     return res.data;
