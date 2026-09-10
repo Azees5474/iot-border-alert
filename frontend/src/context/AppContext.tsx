@@ -240,21 +240,43 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(timer);
   }, [evaluateGeofence, persistAlert]);
 
-  // Sync geofence from settings/backend on mount
+  // Live geofence synchronization across all devices (phone, desktop, tablets)
   useEffect(() => {
-    (async () => {
+    const syncGeofence = async () => {
       try {
         const gf = await geofenceApi.getGeofence();
-        setGeofenceState({
-          latitude: gf.latitude,
-          longitude: gf.longitude,
-          radius: gf.radius,
-        });
-        insideRef.current = null;
+        if (
+          typeof gf?.latitude === 'number' &&
+          typeof gf?.longitude === 'number' &&
+          typeof gf?.radius === 'number' &&
+          Number.isFinite(gf.latitude) &&
+          Number.isFinite(gf.longitude) &&
+          Number.isFinite(gf.radius)
+        ) {
+          setGeofenceState((prev) => {
+            if (
+              prev.latitude === gf.latitude &&
+              prev.longitude === gf.longitude &&
+              prev.radius === gf.radius
+            ) {
+              return prev; // no change, skip re-render
+            }
+            insideRef.current = null; // re-evaluate breach state against new boundary
+            return {
+              latitude: gf.latitude,
+              longitude: gf.longitude,
+              radius: gf.radius,
+            };
+          });
+        }
       } catch {
-        // use settings defaults
+        // best effort, backend may be waking up
       }
-    })();
+    };
+
+    syncGeofence();
+    const interval = setInterval(syncGeofence, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   // Keep settings in sync with geofence changes

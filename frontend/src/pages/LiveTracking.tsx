@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import MapView from '@/components/MapView';
 import { checkGeofence, headingToOffset } from '@/utils/geofence';
-import { Play, Pause, Wifi, Navigation, MapPin, Wind, Smartphone } from 'lucide-react';
+import { deviceApi } from '@/services/api';
+import { Play, Pause, Wifi, Navigation, MapPin, Wind, Smartphone, Bell } from 'lucide-react';
 
 const LiveTracking = () => {
   const {
@@ -18,6 +19,19 @@ const LiveTracking = () => {
   } = useAppContext();
 
   const [simAnimating, setSimAnimating] = useState(false);
+  const [buzzerTesting, setBuzzerTesting] = useState(false);
+
+  const handleTestBuzzer = async () => {
+    setBuzzerTesting(true);
+    try {
+      await deviceApi.setBuzzer({ action: 'on', deviceId: 'ESP32-001' });
+    } catch {
+      // ignore
+    }
+    setTimeout(() => {
+      setBuzzerTesting(false);
+    }, 4000);
+  };
 
   const moveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -138,6 +152,14 @@ const LiveTracking = () => {
           <p className="text-ink-500 text-sm">Real-time GPS location &amp; geofence monitoring</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            className={`btn ${buzzerTesting ? 'btn-danger alert-pulse' : 'btn-outline'} flex items-center gap-1.5`}
+            onClick={handleTestBuzzer}
+            title="Trigger buzzer on ESP32 hardware"
+          >
+            <Bell size={16} className={buzzerTesting ? 'animate-bounce' : ''} />
+            {buzzerTesting ? 'Buzzer Playing...' : 'Test ESP32 Buzzer'}
+          </button>
           <button
             className={`btn ${demoMode ? 'btn-warning' : 'btn-outline'}`}
             onClick={() => setDemoMode(!demoMode)}

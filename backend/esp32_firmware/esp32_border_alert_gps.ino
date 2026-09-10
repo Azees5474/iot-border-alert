@@ -4,10 +4,9 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <HTTPClient.h>
-#include <TinyGPS++.h>
 
 // =====================================================
-// OLED
+// OLED DISPLAY SETTINGS (0.96" I2C SSD1306 128x64)
 // =====================================================
 
 #define SCREEN_WIDTH 128
@@ -16,31 +15,33 @@
 #define OLED_ADDRESS 0x3C
 
 // =====================================================
-// PINS
+// HARDWARE PINS
 // =====================================================
 
 #define SDA_PIN 21
 #define SCL_PIN 22
 #define BUZZER_PIN 25
-#define GPS_RX 16
-#define GPS_TX 17
 
 // =====================================================
-// WIFI
+// WIFI CONFIGURATION
 // =====================================================
 
 const char* ssid = "ESP32TEST";
 const char* password = "12345678";
 
 // =====================================================
-// BACKEND CONFIG
+// BACKEND CONFIGURATION
 // =====================================================
-
+// Cloud Backend (Render):
 const char* backendUrl = "https://iot-border-alert-we.onrender.com";
+
+// Or Local PC Backend (uncomment if testing on same WiFi network):
+// const char* backendUrl = "http://192.168.24.242:3001";
+
 const char* deviceId = "ESP32-001";
 
 // =====================================================
-// OBJECTS
+// OBJECTS & STATE
 // =====================================================
 
 Adafruit_SSD1306 display(
@@ -50,56 +51,41 @@ Adafruit_SSD1306 display(
   OLED_RESET
 );
 
-TinyGPSPlus gps;
-
-// =====================================================
-// GPS DATA
-// =====================================================
-
+// Location & Status (Received from Phone via Backend)
 double latitude = 0.0;
 double longitude = 0.0;
 double gpsAccuracy = 0.0;
 double distance = 0.0;
 bool alert = false;
-
 bool locationReceived = false;
 
-// =====================================================
-// TIMERS
-// =====================================================
+// Status Flags
+bool wifiLost = false;
+bool phoneLost = false;
+bool manualBuzzerTest = false;
+unsigned long manualBuzzerStart = 0;
+const unsigned long MANUAL_BUZZER_DURATION = 4000; // 4 seconds test beep
 
+// Timers
 unsigned long lastLocationReceived = 0;
 unsigned long lastWiFiCheck = 0;
 unsigned long lastReconnectAttempt = 0;
 unsigned long lastAlarmBeep = 0;
 unsigned long lastScreenUpdate = 0;
 unsigned long lastBackendRegister = 0;
-unsigned long lastGpsSend = 0;
 unsigned long lastPollTime = 0;
-unsigned long lastGpsDiagPrint = 0;
 
-// =====================================================
-// SETTINGS
-// =====================================================
-
-const unsigned long LOCATION_TIMEOUT = 10000;
-const unsigned long WIFI_CHECK_INTERVAL = 1000;
+// Settings
+const unsigned long LOCATION_TIMEOUT = 12000;      // 12s without phone update = Phone Lost
+const unsigned long WIFI_CHECK_INTERVAL = 1500;
 const unsigned long WIFI_RECONNECT_INTERVAL = 5000;
-const unsigned long ALARM_BEEP_INTERVAL = 800;
-const unsigned long SCREEN_UPDATE_INTERVAL = 500;
+const unsigned long ALARM_BEEP_INTERVAL = 500;
+const unsigned long SCREEN_UPDATE_INTERVAL = 250;
 const unsigned long BACKEND_REGISTER_INTERVAL = 30000;
-const unsigned long GPS_SEND_INTERVAL = 2000;
-const unsigned long POLL_INTERVAL = 2000;
+const unsigned long POLL_INTERVAL = 1000;          // Poll every 1s for fast buzzer response
 
 // =====================================================
-// STATUS
-// =====================================================
-
-bool wifiLost = false;
-bool phoneLost = false;
-
-// =====================================================
-// SHORT BEEP
+// BUZZER FUNCTIONS
 // =====================================================
 
 void shortBeep()
@@ -109,24 +95,19 @@ void shortBeep()
   digitalWrite(BUZZER_PIN, LOW);
 }
 
-// =====================================================
-// ALARM BEEP
-// =====================================================
-
 void alarmBeep()
 {
   if (millis() - lastAlarmBeep >= ALARM_BEEP_INTERVAL)
   {
     lastAlarmBeep = millis();
-
     digitalWrite(BUZZER_PIN, HIGH);
-    delay(150);
+    delay(180);
     digitalWrite(BUZZER_PIN, LOW);
   }
 }
 
 // =====================================================
-// OLED BASIC
+// OLED HELPER
 // =====================================================
 
 void clearOLED()
@@ -136,246 +117,187 @@ void clearOLED()
 }
 
 // =====================================================
-// STARTING SCREEN - BIG TEXT FOR 0.9"
+// OLED SCREENS
 // =====================================================
 
 void showStarting()
 {
   clearOLED();
-
   display.setTextSize(2);
-  display.setCursor(0, 10);
+  display.setCursor(0, 8);
   display.println("BORDER");
-
-  display.setCursor(0, 30);
+  display.setCursor(0, 28);
   display.println("ALERT");
-
   display.setTextSize(1);
   display.setCursor(0, 50);
-  display.println("Starting...");
-
+  display.println("Phone GPS Mode");
   display.display();
 }
-
-// =====================================================
-// WIFI CONNECTING - BIG TEXT FOR 0.9"
-// =====================================================
 
 void showWiFiConnecting()
 {
   clearOLED();
-
   display.setTextSize(2);
-  display.setCursor(0, 10);
+  display.setCursor(0, 8);
   display.println("WiFi");
-
-  display.setCursor(0, 30);
+  display.setCursor(0, 28);
   display.println("CONNECT");
-
   display.setTextSize(1);
   display.setCursor(0, 50);
   display.println(ssid);
-
   display.display();
 }
-
-// =====================================================
-// WIFI CONNECTED - BIG TEXT FOR 0.9"
-// =====================================================
 
 void showWiFiConnected()
 {
   clearOLED();
-
   display.setTextSize(2);
   display.setCursor(0, 5);
   display.println("WiFi OK");
 
   display.setTextSize(1);
-  display.setCursor(0, 25);
-  display.print("IP:");
+  display.setCursor(0, 26);
+  display.print("IP: ");
   display.println(WiFi.localIP());
 
-  display.setCursor(0, 40);
-  display.print("RSSI:");
+  display.setCursor(0, 38);
+  display.print("RSSI: ");
   display.print(WiFi.RSSI());
   display.println(" dBm");
 
+  display.setCursor(0, 50);
+  display.println("Connecting backend...");
   display.display();
 }
-
-// =====================================================
-// WIFI LOST - BIG TEXT FOR 0.9"
-// =====================================================
 
 void showWiFiLost()
 {
   clearOLED();
-
   display.setTextSize(2);
   display.setCursor(0, 10);
   display.println("WiFi");
-
   display.setCursor(0, 30);
   display.println("LOST");
-
   display.setTextSize(1);
   display.setCursor(0, 50);
   display.println("Reconnecting...");
-
   display.display();
 }
-
-// =====================================================
-// PHONE LOST - BIG TEXT FOR 0.9"
-// =====================================================
 
 void showPhoneLost()
 {
   clearOLED();
-
   display.setTextSize(2);
-  display.setCursor(0, 10);
-  display.println("GPS");
-
-  display.setCursor(0, 30);
-  display.println("LOST");
-
+  display.setCursor(0, 8);
+  display.println("PHONE GPS");
+  display.setCursor(0, 28);
+  display.println("NO SIGNAL");
   display.setTextSize(1);
   display.setCursor(0, 50);
-  display.println("No GPS data");
-
+  display.println("Open app on phone");
   display.display();
 }
 
-// =====================================================
-// GPS WAITING - BIG TEXT FOR 0.9"
-// =====================================================
-
-void showGPSWaiting()
+void showWaitingPhone()
 {
   clearOLED();
-
   display.setTextSize(2);
-  display.setCursor(0, 5);
-  display.println("GPS WAIT");
+  display.setCursor(0, 6);
+  display.println("PHONE GPS");
 
   display.setTextSize(1);
-  display.setCursor(0, 26);
-  unsigned long chars = gps.charsProcessed();
-  if (chars == 0)
-  {
-    display.println("No GPS Signal!");
-    display.setCursor(0, 38);
-    display.println("Check TX/RX Wire");
-  }
-  else
-  {
-    display.print("Bytes: ");
-    display.println(chars);
-    display.setCursor(0, 38);
-    display.print("Sats: ");
-    if (gps.satellites.isValid())
-    {
-      display.println(gps.satellites.value());
-    }
-    else
-    {
-      display.println("Searching...");
-    }
-  }
-
+  display.setCursor(0, 28);
+  display.println("Waiting for phone...");
+  display.setCursor(0, 40);
+  display.println("Open website GPS");
   display.setCursor(0, 52);
-  display.println("Acquiring fix...");
-
+  display.print("WiFi: OK (");
+  display.print(WiFi.RSSI());
+  display.println("dBm)");
   display.display();
 }
 
-// =====================================================
-// LOCATION - BIG TEXT FOR 0.9"
-// =====================================================
-
-void showLocation()
+void showBuzzerTestScreen()
 {
   clearOLED();
+  display.fillRect(0, 0, 128, 16, SSD1306_WHITE);
+  display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+  display.setTextSize(1);
+  display.setCursor(18, 4);
+  display.println("TEST BUZZER");
+
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(2);
+  display.setCursor(8, 24);
+  display.println("BUZZER ON");
 
   display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.println("GPS FIX:");
-
-  display.setCursor(0, 12);
-  display.print("LAT ");
-  display.println(latitude, 4);
-
-  display.setCursor(0, 24);
-  display.print("LON ");
-  display.println(longitude, 4);
-
-  display.setCursor(0, 38);
-  display.print("ACC ");
-  display.print(gpsAccuracy, 1);
-  display.println("m");
-
-  display.setCursor(0, 52);
-  display.print("SAT ");
-  display.print(gps.satellites.value());
-  display.print("  HDOP ");
-  display.print(gps.hdop.value());
-
+  display.setCursor(12, 48);
+  display.println("Website Command");
   display.display();
 }
-
-// =====================================================
-// BORDER STATUS - BIG TEXT FOR 0.9"
-// =====================================================
 
 void showBorderStatus()
 {
   clearOLED();
 
-  if (alert) {
-    display.setTextSize(2);
-    display.setCursor(0, 0);
-    display.println("!ALERT!");
-
+  if (alert)
+  {
+    // BORDER BREACH ALERT
+    display.fillRect(0, 0, 128, 14, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     display.setTextSize(1);
-    display.setCursor(0, 20);
+    display.setCursor(16, 3);
+    display.println("! BORDER ALERT !");
+
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(2);
+    display.setCursor(0, 18);
     display.println("BREACHED");
 
-    display.setTextSize(2);
-    display.setCursor(0, 35);
-    display.print(distance, 0);
-    display.print("m");
-
     display.setTextSize(1);
-    display.setCursor(0, 55);
-    display.print("LAT:");
+    display.setCursor(0, 38);
+    display.print("DIST: ");
+    display.print(distance, 0);
+    display.println(" m");
+
+    display.setCursor(0, 50);
+    display.print("LAT: ");
     display.print(latitude, 4);
-  } else {
-    display.setTextSize(2);
+    display.print(" LON: ");
+    display.print(longitude, 4);
+  }
+  else
+  {
+    // SAFE ZONE
+    display.setTextSize(1);
     display.setCursor(0, 0);
+    display.println("PHONE GPS TRACKING");
+    display.drawLine(0, 10, 127, 10, SSD1306_WHITE);
+
+    display.setTextSize(2);
+    display.setCursor(0, 15);
     display.println("SAFE");
 
     display.setTextSize(1);
-    display.setCursor(0, 20);
-    display.println("GPS ONLINE");
-
-    display.setTextSize(2);
-    display.setCursor(0, 35);
+    display.setCursor(0, 36);
+    display.print("BORDER DIST: ");
     display.print(distance, 0);
-    display.print("m");
+    display.println(" m");
 
-    display.setTextSize(1);
-    display.setCursor(0, 55);
-    display.print("LAT:");
+    display.setCursor(0, 48);
+    display.print("LAT: ");
     display.print(latitude, 4);
+    display.print(" ACC: ");
+    display.print(gpsAccuracy, 0);
+    display.println("m");
   }
 
   display.display();
 }
 
 // =====================================================
-// PARSE TEXT RESPONSE
+// PARSE TEXT RESPONSE FROM BACKEND
 // =====================================================
 
 String getValue(String data, String key)
@@ -390,7 +312,7 @@ String getValue(String data, String key)
 }
 
 // =====================================================
-// HTTP / HTTPS HELPER (Auto SSL bypass for online deployment)
+// HTTP / HTTPS HELPER (Auto SSL bypass for Render HTTPS)
 // =====================================================
 
 bool httpConnect(HTTPClient& http, WiFiClientSecure& secureClient, WiFiClient& standardClient, const String& url)
@@ -407,71 +329,11 @@ bool httpConnect(HTTPClient& http, WiFiClientSecure& secureClient, WiFiClient& s
 }
 
 // =====================================================
-// POLL BACKEND FOR STATUS
-// =====================================================
-
-void pollBackend()
-{
-  if (WiFi.status() != WL_CONNECTED) return;
-  if (millis() - lastPollTime < POLL_INTERVAL) return;
-
-  HTTPClient http;
-  WiFiClientSecure secureClient;
-  WiFiClient standardClient;
-  String url = String(backendUrl) + "/api/device/poll?deviceId=" + String(deviceId);
-
-  if (!httpConnect(http, secureClient, standardClient, url)) {
-    Serial.println("HTTP connect failed");
-    return;
-  }
-
-  int code = http.GET();
-
-  if (code == 200)
-  {
-    String payload = http.getString();
-    latitude = getValue(payload, "lat").toDouble();
-    longitude = getValue(payload, "lon").toDouble();
-    gpsAccuracy = getValue(payload, "acc").toDouble();
-    distance = getValue(payload, "dist").toDouble();
-    alert = getValue(payload, "alert").toInt() > 0.5;
-
-    lastLocationReceived = millis();
-    locationReceived = true;
-
-    if (phoneLost)
-    {
-      phoneLost = false;
-      Serial.println("GPS reconnected");
-      shortBeep();
-    }
-
-    Serial.println("Location update:");
-    Serial.print("  LAT: "); Serial.println(latitude, 6);
-    Serial.print("  LON: "); Serial.println(longitude, 6);
-    Serial.print("  ACC: "); Serial.print(gpsAccuracy, 1); Serial.println(" m");
-    Serial.print("  DIST: "); Serial.print(distance, 0); Serial.println(" m");
-    Serial.print("  ALERT: "); Serial.println(alert ? "YES" : "NO");
-
-    if (alert)
-    {
-      alarmBeep();
-    }
-    else
-    {
-      digitalWrite(BUZZER_PIN, LOW);
-    }
-  }
-
-  http.end();
-  lastPollTime = millis();
-}
-
-// =====================================================
 // REGISTER WITH BACKEND
 // =====================================================
 
-void registerWithBackend() {
+void registerWithBackend()
+{
   if (WiFi.status() != WL_CONNECTED) return;
 
   HTTPClient http;
@@ -489,45 +351,103 @@ void registerWithBackend() {
   body += "\",\"port\":80}";
 
   int code = http.POST(body);
-  Serial.printf("Registered with backend: %d\n", code);
+  Serial.printf("[BACKEND] Registered device %s: HTTP %d\n", deviceId, code);
   http.end();
 }
 
 // =====================================================
-// SEND GPS TO BACKEND
+// POLL BACKEND FOR PHONE GPS & BUZZER COMMANDS
 // =====================================================
 
-void sendGpsToBackend() {
+void pollBackend()
+{
   if (WiFi.status() != WL_CONNECTED) return;
-  if (!locationReceived) return;
+  if (millis() - lastPollTime < POLL_INTERVAL) return;
 
   HTTPClient http;
   WiFiClientSecure secureClient;
   WiFiClient standardClient;
-  String url = String(backendUrl) + "/api/location";
+  String url = String(backendUrl) + "/api/device/poll?deviceId=" + String(deviceId);
 
-  if (!httpConnect(http, secureClient, standardClient, url)) return;
-  http.addHeader("Content-Type", "application/json");
+  if (!httpConnect(http, secureClient, standardClient, url))
+  {
+    Serial.println("[HTTP] Connect failed");
+    return;
+  }
 
-  String body = "{\"latitude\":";
-  body += String(latitude, 6);
-  body += ",\"longitude\":";
-  body += String(longitude, 6);
-  body += ",\"accuracy\":";
-  body += String(gpsAccuracy, 1);
-  body += ",\"timestamp\":\"";
-  body += __DATE__;
-  body += " ";
-  body += __TIME__;
-  body += "\"}";
+  http.setTimeout(3000);
+  int code = http.GET();
 
-  int code = http.POST(body);
-  Serial.printf("GPS sent to backend: %d\n", code);
+  if (code == 200)
+  {
+    String payload = http.getString();
+    double newLat = getValue(payload, "lat").toDouble();
+    double newLon = getValue(payload, "lon").toDouble();
+    gpsAccuracy = getValue(payload, "acc").toDouble();
+    distance = getValue(payload, "dist").toDouble();
+    alert = getValue(payload, "alert").toInt() > 0;
+
+    // Check if valid coordinates received
+    if (newLat != 0.0 || newLon != 0.0)
+    {
+      latitude = newLat;
+      longitude = newLon;
+      lastLocationReceived = millis();
+      locationReceived = true;
+
+      if (phoneLost)
+      {
+        phoneLost = false;
+        Serial.println("[PHONE GPS] Reconnected!");
+        shortBeep();
+      }
+    }
+
+    // Check for buzzer command from website
+    String buzzerCmd = getValue(payload, "buzzer");
+    if (buzzerCmd == "on")
+    {
+      manualBuzzerTest = true;
+      manualBuzzerStart = millis();
+      Serial.println();
+      Serial.println("**************************************************");
+      Serial.println("*  >>> [WEBSITE COMMAND] TEST BUZZER PLAYING! <<< *");
+      Serial.println("**************************************************");
+
+      // Distinct 3-beep burst immediately
+      for (int i = 0; i < 3; i++)
+      {
+        digitalWrite(BUZZER_PIN, HIGH);
+        delay(120);
+        digitalWrite(BUZZER_PIN, LOW);
+        delay(80);
+      }
+    }
+    else if (buzzerCmd == "off")
+    {
+      manualBuzzerTest = false;
+      digitalWrite(BUZZER_PIN, LOW);
+      Serial.println("[WEBSITE COMMAND] Buzzer stopped");
+    }
+
+    Serial.printf("[POLL] Dist: %.0fm | Alert: %s | Buzzer: %s | Lat: %.5f, Lon: %.5f\n",
+                  distance,
+                  alert ? "YES" : "NO",
+                  buzzerCmd.length() > 0 ? buzzerCmd.c_str() : "none",
+                  latitude,
+                  longitude);
+  }
+  else
+  {
+    Serial.printf("[POLL WARNING] HTTP GET returned: %d\n", code);
+  }
+
   http.end();
+  lastPollTime = millis();
 }
 
 // =====================================================
-// CHECK WIFI
+// CHECK WIFI STATUS
 // =====================================================
 
 void checkWiFi()
@@ -544,12 +464,13 @@ void checkWiFi()
     if (wifiLost)
     {
       wifiLost = false;
-      Serial.println("WiFi reconnected");
+      Serial.println("[WIFI] Reconnected!");
       showWiFiConnected();
       shortBeep();
     }
 
-    if (millis() - lastBackendRegister >= BACKEND_REGISTER_INTERVAL) {
+    if (millis() - lastBackendRegister >= BACKEND_REGISTER_INTERVAL)
+    {
       lastBackendRegister = millis();
       registerWithBackend();
     }
@@ -560,7 +481,7 @@ void checkWiFi()
   if (!wifiLost)
   {
     wifiLost = true;
-    Serial.println("WiFi disconnected!");
+    Serial.println("[WIFI] Disconnected!");
     showWiFiLost();
   }
 
@@ -569,7 +490,7 @@ void checkWiFi()
   if (millis() - lastReconnectAttempt >= WIFI_RECONNECT_INTERVAL)
   {
     lastReconnectAttempt = millis();
-    Serial.println("Reconnecting WiFi...");
+    Serial.println("[WIFI] Attempting reconnect...");
     WiFi.disconnect(false);
     delay(100);
     WiFi.begin(ssid, password);
@@ -577,10 +498,10 @@ void checkWiFi()
 }
 
 // =====================================================
-// CHECK GPS SIGNAL
+// CHECK PHONE GPS SIGNAL TIMEOUT
 // =====================================================
 
-void checkGpsSignal()
+void checkPhoneSignal()
 {
   if (!locationReceived) return;
   if (wifiLost) return;
@@ -590,7 +511,7 @@ void checkGpsSignal()
     if (!phoneLost)
     {
       phoneLost = true;
-      Serial.println("GPS signal lost!");
+      Serial.println("[PHONE GPS] Signal lost! No updates in 12 seconds.");
       showPhoneLost();
       alarmBeep();
     }
@@ -602,7 +523,7 @@ void checkGpsSignal()
 }
 
 // =====================================================
-// UPDATE OLED
+// UPDATE OLED DISPLAY
 // =====================================================
 
 void updateOLED()
@@ -613,6 +534,13 @@ void updateOLED()
   }
 
   lastScreenUpdate = millis();
+
+  // Test buzzer takes highest priority on OLED
+  if (manualBuzzerTest)
+  {
+    showBuzzerTestScreen();
+    return;
+  }
 
   if (wifiLost)
   {
@@ -628,7 +556,7 @@ void updateOLED()
 
   if (!locationReceived)
   {
-    showGPSWaiting();
+    showWaitingPhone();
     return;
   }
 
@@ -636,59 +564,35 @@ void updateOLED()
 }
 
 // =====================================================
-// READ GPS FROM NEO-7M
+// HANDLE BUZZER STATE (ALARM & TEST)
 // =====================================================
 
-void readGps()
+void handleBuzzer()
 {
-  while (Serial2.available() > 0)
+  // Test buzzer timeout
+  if (manualBuzzerTest)
   {
-    gps.encode(Serial2.read());
-  }
-
-  // Periodic diagnostic print every 3 seconds to verify GPS communication
-  if (millis() - lastGpsDiagPrint >= 3000)
-  {
-    lastGpsDiagPrint = millis();
-    unsigned long chars = gps.charsProcessed();
-    int sats = gps.satellites.isValid() ? gps.satellites.value() : 0;
-
-    if (chars == 0)
+    if (millis() - manualBuzzerStart >= MANUAL_BUZZER_DURATION)
     {
-      Serial.println("[GPS WARNING] 0 bytes received from GPS module!");
-      Serial.println("  -> Check wiring: GPS TX -> ESP32 GPIO 16, GPS RX -> ESP32 GPIO 17, VCC -> 5V, GND -> GND");
+      manualBuzzerTest = false;
+      digitalWrite(BUZZER_PIN, LOW);
+      Serial.println("[BUZZER] Test period finished.");
     }
     else
     {
-      Serial.printf("[GPS STATUS] Bytes: %lu | Fix: %s | Satellites: %d\n",
-                    chars,
-                    gps.location.isValid() ? "LOCKED" : "SEARCHING...",
-                    sats);
-      if (gps.location.isValid())
-      {
-        Serial.printf("  -> LAT: %.6f, LON: %.6f, HDOP: %.2f\n",
-                      gps.location.lat(), gps.location.lng(), gps.hdop.hdop());
-      }
+      alarmBeep(); // Beep continuously during test period
+      return;
     }
   }
 
-  if (gps.location.isValid())
+  // Border breach alert
+  if (alert)
   {
-    latitude = gps.location.lat();
-    longitude = gps.location.lng();
-    gpsAccuracy = gps.hdop.value() * 5.0; // Approximate accuracy in meters
-
-    if (gpsAccuracy < 1.0) gpsAccuracy = 1.0;
-    if (gpsAccuracy > 100.0) gpsAccuracy = 100.0;
-
-    lastLocationReceived = millis();
-
-    if (!locationReceived)
-    {
-      locationReceived = true;
-      Serial.println("GPS FIX ACQUIRED!");
-      shortBeep();
-    }
+    alarmBeep();
+  }
+  else
+  {
+    digitalWrite(BUZZER_PIN, LOW);
   }
 }
 
@@ -702,10 +606,9 @@ void setup()
   delay(500);
 
   Serial.println();
-  Serial.println("==============================");
-  Serial.println("ESP32 BORDER ALERT SYSTEM");
-  Serial.println("NEO-7M GPS MODULE");
-  Serial.println("==============================");
+  Serial.println("===========================================");
+  Serial.println("   ESP32 BORDER ALERT SYSTEM - PHONE GPS   ");
+  Serial.println("===========================================");
 
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
@@ -714,14 +617,13 @@ void setup()
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS))
   {
-    Serial.println("OLED initialization failed!");
-
+    Serial.println("[ERROR] OLED SSD1306 initialization failed!");
     while (true)
     {
       digitalWrite(BUZZER_PIN, HIGH);
       delay(200);
       digitalWrite(BUZZER_PIN, LOW);
-      delay(1000);
+      delay(800);
     }
   }
 
@@ -737,69 +639,56 @@ void setup()
   Serial.println(ssid);
 
   unsigned long wifiStartTime = millis();
-
-  while (
-    WiFi.status() != WL_CONNECTED &&
-    millis() - wifiStartTime < 15000
-  )
+  while (WiFi.status() != WL_CONNECTED && millis() - wifiStartTime < 12000)
   {
-    delay(500);
+    delay(400);
     Serial.print(".");
   }
-
   Serial.println();
 
   if (WiFi.status() == WL_CONNECTED)
   {
-  Serial.println("==============================");
-  Serial.println("WIFI CONNECTED!");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-  Serial.print("Signal: ");
-  Serial.print(WiFi.RSSI());
-  Serial.println(" dBm");
-  Serial.println("==============================");
+    Serial.println("===========================================");
+    Serial.println("WIFI CONNECTED SUCCESSFULLY!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+    Serial.print("Signal RSSI: ");
+    Serial.print(WiFi.RSSI());
+    Serial.println(" dBm");
+    Serial.println("===========================================");
 
-  wifiLost = false;
-  showWiFiConnected();
-  delay(2000);
+    wifiLost = false;
+    showWiFiConnected();
+    delay(1500);
 
-  registerWithBackend();
-  lastBackendRegister = millis();
-  lastPollTime = millis();
-}
+    registerWithBackend();
+    lastBackendRegister = millis();
+    lastPollTime = millis();
+  }
   else
   {
-    Serial.println("WIFI CONNECTION FAILED");
-    Serial.println("Will keep trying...");
+    Serial.println("WiFi connection pending (will retry in background)");
     wifiLost = true;
     showWiFiLost();
   }
 
-  Serial.println("Starting GPS...");
-  Serial2.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
-
-  Serial.println("Starting polling...");
-
+  // Confirm buzzer hardware with 2 quick chirps on boot
   shortBeep();
+  delay(100);
+  shortBeep();
+
+  Serial.println("System initialized. Listening for Phone GPS and Buzzer commands...");
 }
 
 // =====================================================
-// LOOP
+// MAIN LOOP
 // =====================================================
 
 void loop()
 {
-  readGps();
   checkWiFi();
-  checkGpsSignal();
-
-  if (millis() - lastGpsSend >= GPS_SEND_INTERVAL)
-  {
-    lastGpsSend = millis();
-    sendGpsToBackend();
-  }
-
+  checkPhoneSignal();
   pollBackend();
+  handleBuzzer();
   updateOLED();
 }

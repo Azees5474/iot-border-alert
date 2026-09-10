@@ -174,6 +174,9 @@ app.post('/api/geofence', (req, res) => {
     radius: radius ?? geofence.radius,
   };
   lastAlertState = false;
+  evaluateAndMaybeAlert();
+  forwardLocationToDevices();
+  console.log(`[GEOFENCE UPDATED] Lat: ${geofence.latitude}, Lon: ${geofence.longitude}, Radius: ${geofence.radius}m`);
   res.json(geofence);
 });
 
