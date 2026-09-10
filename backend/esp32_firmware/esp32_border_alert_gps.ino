@@ -85,16 +85,16 @@ const unsigned long BACKEND_REGISTER_INTERVAL = 30000;
 const unsigned long POLL_INTERVAL = 1000;          // Poll every 1s for fast buzzer response
 
 // =====================================================
-// UNIVERSAL BUZZER FUNCTIONS (Active + Passive Buzzers)
+// BUZZER TEST & CONTROL FUNCTIONS (Active + Passive Buzzers)
 // =====================================================
 
-void buzzerSound(unsigned long durationMs)
+void playBuzzer(unsigned long durationMs)
 {
   unsigned long start = millis();
   while (millis() - start < durationMs)
   {
     digitalWrite(BUZZER_PIN, HIGH);
-    delayMicroseconds(200); // 2500Hz oscillation for passive buzzer
+    delayMicroseconds(200); // 2500Hz oscillation works on BOTH active and passive buzzers
     digitalWrite(BUZZER_PIN, LOW);
     delayMicroseconds(200);
   }
@@ -103,7 +103,7 @@ void buzzerSound(unsigned long durationMs)
 
 void shortBeep()
 {
-  buzzerSound(120);
+  playBuzzer(120);
 }
 
 void alarmBeep()
@@ -111,7 +111,7 @@ void alarmBeep()
   if (millis() - lastAlarmBeep >= ALARM_BEEP_INTERVAL)
   {
     lastAlarmBeep = millis();
-    buzzerSound(180);
+    playBuzzer(180);
   }
 }
 
@@ -426,8 +426,8 @@ void pollBackend()
       // Distinct 3-beep burst immediately
       for (int i = 0; i < 3; i++)
       {
-        buzzerSound(140);
-        delay(80);
+        playBuzzer(150);
+        delay(100);
       }
     }
     else if (buzzerCmd == "off")
@@ -619,6 +619,17 @@ void setup()
 
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
+
+  // Self-test buzzer hardware on GPIO 25 on boot
+  Serial.println("===========================================");
+  Serial.println("Testing BUZZER on GPIO 25 (3 beeps)...");
+  for (int i = 0; i < 3; i++)
+  {
+    playBuzzer(150);
+    delay(100);
+  }
+  Serial.println("Buzzer hardware test OK!");
+  Serial.println("===========================================");
 
   Wire.begin(SDA_PIN, SCL_PIN);
 
