@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -75,6 +76,7 @@ unsigned long lastScreenUpdate = 0;
 unsigned long lastBackendRegister = 0;
 unsigned long lastGpsSend = 0;
 unsigned long lastPollTime = 0;
+unsigned long lastGpsDiagPrint = 0;
 
 // =====================================================
 // SETTINGS
@@ -255,15 +257,36 @@ void showGPSWaiting()
   clearOLED();
 
   display.setTextSize(2);
-  display.setCursor(0, 10);
-  display.println("GPS");
-
-  display.setCursor(0, 30);
-  display.println("SEARCH");
+  display.setCursor(0, 5);
+  display.println("GPS WAIT");
 
   display.setTextSize(1);
-  display.setCursor(0, 50);
-  display.println("Waiting for satellites...");
+  display.setCursor(0, 26);
+  unsigned long chars = gps.charsProcessed();
+  if (chars == 0)
+  {
+    display.println("No GPS Signal!");
+    display.setCursor(0, 38);
+    display.println("Check TX/RX Wire");
+  }
+  else
+  {
+    display.print("Bytes: ");
+    display.println(chars);
+    display.setCursor(0, 38);
+    display.print("Sats: ");
+    if (gps.satellites.isValid())
+    {
+      display.println(gps.satellites.value());
+    }
+    else
+    {
+      display.println("Searching...");
+    }
+  }
+
+  display.setCursor(0, 52);
+  display.println("Acquiring fix...");
 
   display.display();
 }
@@ -367,6 +390,23 @@ String getValue(String data, String key)
 }
 
 // =====================================================
+// HTTP / HTTPS HELPER (Auto SSL bypass for online deployment)
+// =====================================================
+
+bool httpConnect(HTTPClient& http, WiFiClientSecure& secureClient, WiFiClient& standardClient, const String& url)
+{
+  if (url.startsWith("https://"))
+  {
+    secureClient.setInsecure(); // Bypass certificate validation for Render / Cloudflare SSL
+    return http.begin(secureClient, url);
+  }
+  else
+  {
+    return http.begin(standardClient, url);
+  }
+}
+
+// =====================================================
 // POLL BACKEND FOR STATUS
 // =====================================================
 
@@ -376,9 +416,15 @@ void pollBackend()
   if (millis() - lastPollTime < POLL_INTERVAL) return;
 
   HTTPClient http;
+  WiFiClientSecure secureClient;
+  WiFiClient standardClient;
   String url = String(backendUrl) + "/api/device/poll?deviceId=" + String(deviceId);
 
-  http.begin(url);
+  if (!httpConnect(http, secureClient, standardClient, url)) {
+    Serial.println("HTTP connect failed");
+    return;
+  }
+
   int code = http.GET();
 
   if (code == 200)
@@ -429,9 +475,11 @@ void registerWithBackend() {
   if (WiFi.status() != WL_CONNECTED) return;
 
   HTTPClient http;
+  WiFiClientSecure secureClient;
+  WiFiClient standardClient;
   String url = String(backendUrl) + "/api/device/register";
 
-  http.begin(url);
+  if (!httpConnect(http, secureClient, standardClient, url)) return;
   http.addHeader("Content-Type", "application/json");
 
   String body = "{\"deviceId\":\"";
@@ -454,9 +502,11 @@ void sendGpsToBackend() {
   if (!locationReceived) return;
 
   HTTPClient http;
+  WiFiClientSecure secureClient;
+  WiFiClient standardClient;
   String url = String(backendUrl) + "/api/location";
 
-  http.begin(url);
+  if (!httpConnect(http, secureClient, standardClient, url)) return;
   http.addHeader("Content-Type", "application/json");
 
   String body = "{\"latitude\":";
@@ -594,6 +644,32 @@ void readGps()
   while (Serial2.available() > 0)
   {
     gps.encode(Serial2.read());
+  }
+
+  // Periodic diagnostic print every 3 seconds to verify GPS communication
+  if (millis() - lastGpsDiagPrint >= 3000)
+  {
+    lastGpsDiagPrint = millis();
+    unsigned long chars = gps.charsProcessed();
+    int sats = gps.satellites.isValid() ? gps.satellites.value() : 0;
+
+    if (chars == 0)
+    {
+      Serial.println("[GPS WARNING] 0 bytes received from GPS module!");
+      Serial.println("  -> Check wiring: GPS TX -> ESP32 GPIO 16, GPS RX -> ESP32 GPIO 17, VCC -> 5V, GND -> GND");
+    }
+    else
+    {
+      Serial.printf("[GPS STATUS] Bytes: %lu | Fix: %s | Satellites: %d\n",
+                    chars,
+                    gps.location.isValid() ? "LOCKED" : "SEARCHING...",
+                    sats);
+      if (gps.location.isValid())
+      {
+        Serial.printf("  -> LAT: %.6f, LON: %.6f, HDOP: %.2f\n",
+                      gps.location.lat(), gps.location.lng(), gps.hdop.hdop());
+      }
+    }
   }
 
   if (gps.location.isValid())

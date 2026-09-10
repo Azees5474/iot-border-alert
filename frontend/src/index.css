@@ -57,6 +57,9 @@
 /* Leaflet popup & tile tweaks */
 .leaflet-popup { font-family: inherit; }
 .leaflet-container { background: var(--bg-secondary); }
+.map-dark-tiles .leaflet-tile-pane {
+  filter: brightness(0.6) invert(1) contrast(2.8) hue-rotate(200deg) saturate(0.35) brightness(0.75);
+}
 .leaflet-popup-content-wrapper {
   border-radius: 0.5rem;
   background: var(--panel-2);
