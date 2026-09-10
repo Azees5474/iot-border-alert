@@ -118,12 +118,20 @@ async function forwardLocationToDevices() {
   };
 
   for (const device of registeredDevices) {
+    if (!device.ip || device.ip === '127.0.0.1') continue;
     const url = `http://${device.ip}:${device.port || 80}/location?lat=${payload.latitude}&lon=${payload.longitude}&accuracy=${payload.accuracy}&distance=${payload.distance}&alert=${payload.alert ? 1 : 0}`;
     try {
-      await http.get(url);
-      device.lastSeen = new Date().toISOString();
+      const req = http.get(url, { timeout: 1500 }, (res) => {
+        device.lastSeen = new Date().toISOString();
+      });
+      req.on('error', (err) => {
+        // ESP32 uses polling or has no server on port 80; ignore safely without crashing
+      });
+      req.on('timeout', () => {
+        req.destroy();
+      });
     } catch (err) {
-      console.error(`Failed to forward to ${device.deviceId}:`, err.message);
+      // ignore
     }
   }
 }
@@ -224,6 +232,7 @@ app.get('/api/device/poll', (req, res) => {
     '&alert=' + (status.alert ? 1 : 0);
   if (buzzerCommand) {
     text += '&buzzer=' + buzzerCommand.action;
+    console.log(`[POLL DISPATCH] Sent buzzer=${buzzerCommand.action} to device ${deviceId || 'unknown'}`);
     buzzerCommand = null;
   }
   res.type('text/plain').send(text);
@@ -241,6 +250,7 @@ app.post('/api/device/buzzer', (req, res) => {
     deviceId: deviceId || null,
     ts: new Date().toISOString(),
   };
+  console.log(`[BUZZER TRIGGERED] Action: ${action} from website for device: ${deviceId || 'all'}`);
   res.json({ ok: true, command: buzzerCommand });
 });
 
