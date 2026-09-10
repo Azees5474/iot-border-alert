@@ -32,11 +32,11 @@ const char* password = "12345678";
 // =====================================================
 // BACKEND CONFIGURATION
 // =====================================================
-// Cloud Backend (Render):
-const char* backendUrl = "https://iot-border-alert-we.onrender.com";
+// Local PC Backend on the "ESP32TEST" hotspot network:
+const char* backendUrl = "http://10.99.77.172:3001";
 
-// Or Local PC Backend (uncomment if testing on same WiFi network):
-// const char* backendUrl = "http://192.168.24.242:3001";
+// Alternative (Render Cloud Backend):
+// const char* backendUrl = "https://iot-border-alert-we.onrender.com";
 
 const char* deviceId = "ESP32-001";
 
@@ -85,14 +85,25 @@ const unsigned long BACKEND_REGISTER_INTERVAL = 30000;
 const unsigned long POLL_INTERVAL = 1000;          // Poll every 1s for fast buzzer response
 
 // =====================================================
-// BUZZER FUNCTIONS
+// UNIVERSAL BUZZER FUNCTIONS (Active + Passive Buzzers)
 // =====================================================
+
+void buzzerSound(unsigned long durationMs)
+{
+  unsigned long start = millis();
+  while (millis() - start < durationMs)
+  {
+    digitalWrite(BUZZER_PIN, HIGH);
+    delayMicroseconds(200); // 2500Hz oscillation for passive buzzer
+    digitalWrite(BUZZER_PIN, LOW);
+    delayMicroseconds(200);
+  }
+  digitalWrite(BUZZER_PIN, LOW);
+}
 
 void shortBeep()
 {
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(100);
-  digitalWrite(BUZZER_PIN, LOW);
+  buzzerSound(120);
 }
 
 void alarmBeep()
@@ -100,9 +111,7 @@ void alarmBeep()
   if (millis() - lastAlarmBeep >= ALARM_BEEP_INTERVAL)
   {
     lastAlarmBeep = millis();
-    digitalWrite(BUZZER_PIN, HIGH);
-    delay(180);
-    digitalWrite(BUZZER_PIN, LOW);
+    buzzerSound(180);
   }
 }
 
@@ -417,9 +426,7 @@ void pollBackend()
       // Distinct 3-beep burst immediately
       for (int i = 0; i < 3; i++)
       {
-        digitalWrite(BUZZER_PIN, HIGH);
-        delay(120);
-        digitalWrite(BUZZER_PIN, LOW);
+        buzzerSound(140);
         delay(80);
       }
     }
