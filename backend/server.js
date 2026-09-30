@@ -206,7 +206,11 @@ app.post('/api/device/status', (req, res) => {
 });
 
 app.get('/api/device/status', (req, res) => {
-  res.json(deviceStatus);
+  const isRecent = deviceStatus.lastSeen && (Date.now() - new Date(deviceStatus.lastSeen).getTime() < 15000);
+  res.json({
+    ...deviceStatus,
+    status: isRecent ? 'online' : 'offline',
+  });
 });
 
 // --- Device heartbeat ---
@@ -223,6 +227,13 @@ app.post('/api/device/heartbeat', (req, res) => {
 // --- ESP32 Poll ---
 app.get('/api/device/poll', (req, res) => {
   const deviceId = req.query.deviceId;
+  if (deviceId) {
+    deviceStatus = {
+      deviceId,
+      status: 'online',
+      lastSeen: new Date().toISOString(),
+    };
+  }
   const status = computeStatus();
   let text =
     'lat=' + currentLocation.latitude +
@@ -257,6 +268,11 @@ app.post('/api/device/buzzer', (req, res) => {
 // --- ESP32 Register IP ---
 app.post('/api/device/register', (req, res) => {
   const { deviceId, ip, port } = req.body;
+  deviceStatus = {
+    deviceId: deviceId || 'ESP32-001',
+    status: 'online',
+    lastSeen: new Date().toISOString(),
+  };
   const existing = registeredDevices.find((d) => d.deviceId === deviceId);
   if (existing) {
     existing.ip = ip ?? existing.ip;

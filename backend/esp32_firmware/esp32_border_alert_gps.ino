@@ -32,8 +32,8 @@ const char* password = "12345678";
 // =====================================================
 // BACKEND CONFIGURATION
 // =====================================================
-// Local PC Backend on the "ESP32TEST" hotspot network:
-const char* backendUrl = "http://10.99.77.172:3001";
+// Local PC Backend on the "ESP32TEST" network (active PC IP):
+const char* backendUrl = "http://10.208.73.172:3001";
 
 // Alternative (Render Cloud Backend):
 // const char* backendUrl = "https://iot-border-alert-we.onrender.com";
@@ -82,7 +82,7 @@ const unsigned long WIFI_RECONNECT_INTERVAL = 5000;
 const unsigned long ALARM_BEEP_INTERVAL = 500;
 const unsigned long SCREEN_UPDATE_INTERVAL = 250;
 const unsigned long BACKEND_REGISTER_INTERVAL = 30000;
-const unsigned long POLL_INTERVAL = 1000;          // Poll every 1s for fast buzzer response
+const unsigned long POLL_INTERVAL = 2500;          // Poll every 2.5s for rock-solid stability without socket exhaustion
 
 // =====================================================
 // BUZZER TEST & CONTROL FUNCTIONS (Active + Passive Buzzers)
@@ -336,6 +336,9 @@ String getValue(String data, String key)
 
 bool httpConnect(HTTPClient& http, WiFiClientSecure& secureClient, WiFiClient& standardClient, const String& url)
 {
+  http.setReuse(false);
+  http.setTimeout(2500);
+
   if (url.startsWith("https://"))
   {
     secureClient.setInsecure(); // Bypass certificate validation for Render / Cloudflare SSL
@@ -362,6 +365,7 @@ void registerWithBackend()
 
   if (!httpConnect(http, secureClient, standardClient, url)) return;
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("Connection", "close");
 
   String body = "{\"deviceId\":\"";
   body += deviceId;
@@ -382,6 +386,7 @@ void pollBackend()
 {
   if (WiFi.status() != WL_CONNECTED) return;
   if (millis() - lastPollTime < POLL_INTERVAL) return;
+  lastPollTime = millis(); // ALWAYS update immediately to prevent tight retry loop!
 
   HTTPClient http;
   WiFiClientSecure secureClient;
@@ -394,7 +399,7 @@ void pollBackend()
     return;
   }
 
-  http.setTimeout(3000);
+  http.addHeader("Connection", "close");
   int code = http.GET();
 
   if (code == 200)
@@ -447,20 +452,21 @@ void pollBackend()
       Serial.println("[WEBSITE COMMAND] Buzzer stopped");
     }
 
-    Serial.printf("[POLL] Dist: %.0fm | Alert: %s | Buzzer: %s | Lat: %.5f, Lon: %.5f\n",
+    Serial.printf("[POLL OK] Dist: %.0fm | Alert: %s | Buzzer: %s | Free Heap: %d\n",
                   distance,
                   alert ? "YES" : "NO",
                   buzzerCmd.length() > 0 ? buzzerCmd.c_str() : "none",
-                  latitude,
-                  longitude);
+                  ESP.getFreeHeap());
   }
   else
   {
-    Serial.printf("[POLL WARNING] HTTP GET returned: %d\n", code);
+    Serial.printf("[POLL FAILED] HTTP code: %d (%s) | Free Heap: %d\n",
+                  code,
+                  http.errorToString(code).c_str(),
+                  ESP.getFreeHeap());
   }
 
   http.end();
-  lastPollTime = millis();
 }
 
 // =====================================================
@@ -661,6 +667,7 @@ void setup()
   showWiFiConnecting();
 
   WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false); // CRITICAL: Disable Wi-Fi modem sleep to prevent connection drops!
   WiFi.begin(ssid, password);
 
   Serial.print("Connecting to WiFi: ");
